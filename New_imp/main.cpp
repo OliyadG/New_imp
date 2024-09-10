@@ -20,6 +20,8 @@ public:
 			cout << ss << endl;
 		}
 	}
+	void static activationFunction() {};
+	
 
 private:
 	//construction of activation(w*x(wx+wx+wx)+b);
@@ -27,6 +29,9 @@ private:
 	vector<double> w;
 	double x; // X = (w+w2+w3+w4...wn)x0
 	double b;
+
+	double y;
+
 
 	int myIndex;
 
@@ -50,7 +55,7 @@ class Network {
 
 public:
 
-	Network(int numberOfInputLayers, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNeurons);
+	Network(int numberOfInputLayerNeuron, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNeurons);
 	vector<vector<Neuron>> getLayers(void) { return Layers; }
 
 private:
@@ -59,24 +64,27 @@ private:
 
 };
 
-Network::Network(int numberOfInputLayers, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNuerons)
+Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int numberOfHiddenNeurons, int numberOfOutputNuerons)
 {
-	vector<vector<Neuron>> tempLayer(numberOfHiddenLayers);
+	vector<vector<Neuron>> tempLayer(1+  numberOfHiddenLayers  +1);//supparated the inputlayer and the outputlayers
 
-	for (int countInputLayers = 0; countInputLayers < numberOfInputLayers; countInputLayers++)
+
+	//inputLayer made
+	for (int countInputLayers = 0; countInputLayers < numberOfInputLayersNeuron; countInputLayers++)
 	{
 		Neuron tempNeuron = Neuron();
-		tempNeuron
-		tempLayer[0]fdjj
+		tempNeuron.makeConnections(numberOfHiddenNeurons);
+		tempLayer[0].push_back(tempNeuron);
 	}
 
 
-	for (int countLayers = 1; countLayers < numberOfHiddenLayers; countLayers++)
+	//hiddenLayer made
+	for (int countLayers = 1; countLayers <= numberOfHiddenLayers; countLayers++)
 	{
-		for (int countNeurons = 0; countNeurons < numberOfNeurons; countNeurons++)
+		for (int countNeurons = 0; countNeurons < numberOfHiddenNeurons; countNeurons++)
 		{
 			Neuron tempNeuron = Neuron();
-			tempNeuron.makeConnections(numberOfNeurons);
+			tempNeuron.makeConnections(numberOfHiddenNeurons);
 			tempLayer[countLayers].push_back(tempNeuron);
 
 		}
@@ -84,32 +92,29 @@ Network::Network(int numberOfInputLayers, int numberOfHiddenLayers, int numberOf
 		
 	}
 	
-	//outputLayer
-	for (int outputNeurons = 0; outputNeurons <= numberOfOutputNuerons; outputNeurons++) {
+	//outputLayer made
+	for (int outputNeurons = 0; outputNeurons < numberOfOutputNuerons; outputNeurons++) {
 		Neuron tempNeuron = Neuron();
-		tempNeuron.makeConnections(numberOfNeurons);
-		tempLayer[numberOfHiddenLayers].push_back(tempNeuron);
+		tempNeuron.makeConnections(1);
+		tempLayer[numberOfHiddenLayers+1].push_back(tempNeuron);//+2 because we have added extra 2 conteners for the input and output!, the input took the [0], the out put took[+1]
 	}
+
+	Layers = tempLayer;
 }
 
 
 int main()
 {
-	Network tempNet = Network(2, 3, 5, 2);
+	Network tempNet = Network(2, 10, 500, 2);
 
 	auto Layers = tempNet.getLayers();
 
-	//check Made neurons fo far with weight
-	int count = 0;
-	for (auto &aLayer : Layers)
-	{
-		cout << "***layer: " << count <<"***" << endl;
-		for (auto& Nuro : aLayer)
-		{
-			Nuro.getweightsAndConnections();
-			cout << "****DONe*****\n";
-		}
-	}
+	size_t size_in_bytes = Layers.size() * sizeof(int);
+	double size_in_megabytes = static_cast<double>(size_in_bytes) / (1024 * 1024);
+
+
+	std::cout << "Size of the vector in bytes: " << size_in_bytes << std::endl;
+	std::cout << "Size of the vector in megabytes: " << size_in_megabytes << " MB" << std::endl;
 
 
 }
