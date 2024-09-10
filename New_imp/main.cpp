@@ -1,12 +1,6 @@
 #include<iostream>
 #include<vector>
-
 using namespace std;
-
-struct Connections {
-
-	double weight;
-};
 
 
 class Neuron {
@@ -20,16 +14,19 @@ public:
 			cout << ss << endl;
 		}
 	}
+	void static activationFunction() {};
 
 private:
 	//construction of activation(w*x(wx+wx+wx)+b);
-
 	vector<double> w;
-	double x; // X = (w+w2+w3+w4...wn)x0
-	double b;
+
+
+	double x_Input; // X = (w+w2+w3+w4...wn)x0
+	double b_Bais = 1; // bias
+	double y_Activated; // output
+
 
 	int myIndex;
-
 };
 void Neuron::makeConnections(int numberOfNextLayerNeurons)
 {
@@ -42,74 +39,114 @@ void Neuron::makeConnections(int numberOfNextLayerNeurons)
 }
 
 
-
-
-
-
 class Network {
 
 public:
+	Network(int numberOfInputLayerNeuron, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNeurons);
+	void feedForward();
 
-	Network(int numberOfInputLayers, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNeurons);
+
+
+	//temp sets and gets
 	vector<vector<Neuron>> getLayers(void) { return Layers; }
+	void setInput(vector<double> input) { Input = input; }
+
 
 private:
-
 	vector<vector<Neuron>> Layers;
+	static vector<double> Input;
 
 };
-
-Network::Network(int numberOfInputLayers, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNuerons)
+Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int numberOfHiddenNeurons, int numberOfOutputNuerons)
 {
-	vector<vector<Neuron>> tempLayer(numberOfHiddenLayers);
+	vector<vector<Neuron>> tempLayer(1+  numberOfHiddenLayers  +1);//supparated the inputlayer and the outputlayers
 
-	for (int countInputLayers = 0; countInputLayers < numberOfInputLayers; countInputLayers++)
+	//inputLayer made
+	for (int countInputLayers = 0; countInputLayers < numberOfInputLayersNeuron; countInputLayers++)
 	{
 		Neuron tempNeuron = Neuron();
-		tempNeuron
-		tempLayer[0]fdjj
+		tempNeuron.makeConnections(numberOfHiddenNeurons);
+		tempLayer[0].push_back(tempNeuron);
 	}
 
-
-	for (int countLayers = 1; countLayers < numberOfHiddenLayers; countLayers++)
+	//hiddenLayer made
+	for (int countLayers = 1; countLayers <= numberOfHiddenLayers; countLayers++)
 	{
-		for (int countNeurons = 0; countNeurons < numberOfNeurons; countNeurons++)
+		for (int countNeurons = 0; countNeurons < numberOfHiddenNeurons; countNeurons++)
 		{
 			Neuron tempNeuron = Neuron();
-			tempNeuron.makeConnections(numberOfNeurons);
+			tempNeuron.makeConnections(numberOfHiddenNeurons);
 			tempLayer[countLayers].push_back(tempNeuron);
+		}
+	}
+	
+	//outputLayer made
+	for (int outputNeurons = 0; outputNeurons < numberOfOutputNuerons; outputNeurons++) {
+		Neuron tempNeuron = Neuron();
+		tempNeuron.makeConnections(1);
+		tempLayer[numberOfHiddenLayers+1].push_back(tempNeuron);//+2 because we have added extra 2 conteners for the input and output!, the input took the [0], the out put took[+1]
+	}
+	Layers = tempLayer;
+}
+
+void Network::feedForward()
+{
+
+
+	
+
+	for (int singleLayer = 0;singleLayer < Layers.size(); singleLayer++)
+	{
+		
+		for (int singleNeuron = 0; singleNeuron < Layers[singleLayer].size(); singleNeuron++)
+		{
+			//y = w*x+b
+
 
 		}
 
-		
-	}
-	
-	//outputLayer
-	for (int outputNeurons = 0; outputNeurons <= numberOfOutputNuerons; outputNeurons++) {
-		Neuron tempNeuron = Neuron();
-		tempNeuron.makeConnections(numberOfNeurons);
-		tempLayer[numberOfHiddenLayers].push_back(tempNeuron);
 	}
 }
 
-
 int main()
 {
-	Network tempNet = Network(2, 3, 5, 2);
-
+	Network tempNet = Network(2, 10, 10, 2);
 	auto Layers = tempNet.getLayers();
+
+	tempNet.setInput(vector<double>{1.0, 0.0});
+	
+
+
+	//size printer
+	tempNet.feedForward();
 
 	//check Made neurons fo far with weight
 	int count = 0;
-	for (auto &aLayer : Layers)
+	for (auto& aLayer : Layers)
 	{
-		cout << "***layer: " << count <<"***" << endl;
+		cout << "***layer: " << count << "***" << endl;
 		for (auto& Nuro : aLayer)
 		{
 			Nuro.getweightsAndConnections();
 			cout << "****DONe*****\n";
 		}
+		count++;
 	}
 
-
 }
+
+/*
+* neural network with input, output and hiddenlayer made
+* connection made with all neuron in the next layer
+* weight given randomly
+* b = bias
+* w = weight
+* x = input/output value
+* **********************
+* 
+* 
+* missing, feedforward, the delta
+
+
+
+*/
