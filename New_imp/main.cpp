@@ -16,10 +16,17 @@ public:
 	}
 	void static activationFunction() {};
 
+	void static activationFunction() {};
+	
+
 private:
 	//construction of activation(w*x(wx+wx+wx)+b);
 	vector<double> w;
 
+	double y;
+
+
+	int myIndex;
 
 	double x_Input; // X = (w+w2+w3+w4...wn)x0
 	double b_Bais = 1; // bias
@@ -45,9 +52,7 @@ public:
 	Network(int numberOfInputLayerNeuron, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNeurons);
 	void feedForward();
 
-
-
-	//temp sets and gets
+	Network(int numberOfInputLayerNeuron, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNeurons);
 	vector<vector<Neuron>> getLayers(void) { return Layers; }
 	void setInput(vector<double> input) { Input = input; }
 
@@ -57,9 +62,11 @@ private:
 	static vector<double> Input;
 
 };
+
 Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int numberOfHiddenNeurons, int numberOfOutputNuerons)
 {
 	vector<vector<Neuron>> tempLayer(1+  numberOfHiddenLayers  +1);//supparated the inputlayer and the outputlayers
+
 
 	//inputLayer made
 	for (int countInputLayers = 0; countInputLayers < numberOfInputLayersNeuron; countInputLayers++)
@@ -69,6 +76,9 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 		tempLayer[0].push_back(tempNeuron);
 	}
 
+
+	//hiddenLayer made
+	for (int countLayers = 1; countLayers <= numberOfHiddenLayers; countLayers++)
 	//hiddenLayer made
 	for (int countLayers = 1; countLayers <= numberOfHiddenLayers; countLayers++)
 	{
@@ -89,6 +99,14 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 	Layers = tempLayer;
 }
 
+		
+	}
+	
+	//outputLayer made
+	for (int outputNeurons = 0; outputNeurons < numberOfOutputNuerons; outputNeurons++) {
+		Neuron tempNeuron = Neuron();
+		tempNeuron.makeConnections(1);
+		tempLayer[numberOfHiddenLayers+1].push_back(tempNeuron);//+2 because we have added extra 2 conteners for the input and output!, the input took the [0], the out put took[+1]
 void Network::feedForward()
 {
 
@@ -106,6 +124,8 @@ void Network::feedForward()
 		}
 
 	}
+
+	Layers = tempLayer;
 }
 
 int main()
