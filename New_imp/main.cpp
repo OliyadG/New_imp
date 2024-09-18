@@ -17,13 +17,15 @@ public:
 
 
 	// temp gets
-	vector<double>& getweightsAndConnections() {return w;}
+	vector<double>& getweightsAndConnections() { return w; }
 	double getInput() { return x_Input; }
 	double getBais() { return b_Bais; }
 	double getY_activated() { return y_Activated; }
 
+
 	// temp sets
 	void set_xInput(double x) { x_Input = x; }
+	void resetX() { x_Input = 0; }
 
 
 private:
@@ -32,13 +34,13 @@ private:
 	double x_Input; // X = (w+w2+w3+w4...wn)x0
 	double b_Bais = 1; // bias
 	double y_Activated; // output
-	
+
 };
 void Neuron::makeConnections(int numberOfNextLayerNeurons)
 {
 	random_device rd;
 	mt19937 random_engine(rd());
-	uniform_real_distribution<> dist(0.0, 1.0);
+	uniform_real_distribution<> dist(-1.0, 1.0);
 
 	w = vector<double>(numberOfNextLayerNeurons);
 
@@ -46,12 +48,12 @@ void Neuron::makeConnections(int numberOfNextLayerNeurons)
 	{
 		tempCon = dist(random_engine);
 	}
-	
-	b_Bais = dist(random_engine)*0.1;
+
+	b_Bais = dist(random_engine) * 0.1;
 }
 
 
-class Network{
+class Network {
 
 public:
 	Network(int numberOfInputLayerNeuron, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNeurons);
@@ -68,11 +70,11 @@ public:
 	void setInput(vector<double> input) { Input = input; }
 	void setOutput(vector<double> output) { Output = output; }
 	void resetOutput() { Output.clear(); }
-		 
+
 
 private:
 	vector<vector<Neuron>> Layers;
-    vector<double> Input;
+	vector<double> Input;
 	vector<double> Output;
 
 };
@@ -111,17 +113,17 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 
 double Network::getWeightedSum(int layerIndex, int neuronIndex)
 {
-	 double tempWeightedSum = 0.0;
-	 
+	double tempWeightedSum = 0.0;
+
 
 	//i'll take each weight vector of each layer's indexed neuron and do the weightedsum and return it.
 	// cout << "called for layer: " << layerIndex << "- and for neuronIndex: " << neuronIndex<<endl;
-	for (auto &nueron : Layers[layerIndex])
+	for (auto& nueron : Layers[layerIndex])
 	{
 		double weight = nueron.getweightsAndConnections()[neuronIndex];
 		double x = nueron.getInput();
 		double b = nueron.getBais();
-		
+
 		tempWeightedSum = tempWeightedSum + (weight * x + b);
 		//cout << "\nweight = " <<weight<<" x="<<x<<" b="<<b<<"--\n";
 	}
@@ -137,19 +139,12 @@ void Network::feedForward()
 	Layers[0][0].set_xInput(Input[0]);
 	Layers[0][1].set_xInput(Input[1]);
 
-	cout << Layers[0][0].getInput();
-	cout << Layers[0][1].getInput();
-
-
 	double weightedSum;
 
-
-
-
-	for (int singleLayer = 0; singleLayer < Layers.size()-1; singleLayer++)
-	{	
-		for (int singleNeuron = 0; singleNeuron < Layers[singleLayer+1].size(); singleNeuron++)
-		{	
+	for (int singleLayer = 0; singleLayer < Layers.size() - 1; singleLayer++)
+	{
+		for (int singleNeuron = 0; singleNeuron < Layers[singleLayer + 1].size(); singleNeuron++)
+		{
 			/*
 			* for every layer sent, a neuron of nextlayer is given the weighted sum of the current layers neurons, repectivly indexed
 			* what i want to make sure now is the last 2, output neurons have thereweighted sum activated valueas an out put
@@ -160,26 +155,19 @@ void Network::feedForward()
 			double Activated = Neuron::activationFunction(weightedSum);
 
 			//cout <<"\n" << Layers[singleLayer + 1][singleNeuron].getInput() << "******************************** start" << endl;
-			Layers[singleLayer+1][singleNeuron].set_xInput(Activated);
+			Layers[singleLayer + 1][singleNeuron].set_xInput(Activated);
 			//cout<<"\n" << Layers[singleLayer + 1][singleNeuron].getInput() << "****************************** end" << endl;
 
-			//cout <<"\n\nWeightedsum: ="<<weightedSum<<endl<< "Activated: = " << Activated << endl<<endl;
-			
+			//cout <<"Weightedsum: ="<<weightedSum<<endl<< "Activated: = " << Activated << endl<<endl;
+
 		}
-
-
 	}
-
-
 	//output
 	weightedSum = (Layers[Layers.size() - 1][0].getweightsAndConnections()[0]/*w*/ * Layers[Layers.size() - 1][0].getInput()/*x*/ + Layers[Layers.size() - 1][0].getBais()/*b*/);
 	Output.push_back(Neuron::activationFunction(weightedSum));
 
 	weightedSum = (Layers[Layers.size() - 1][1].getweightsAndConnections()[0]/*w*/ * Layers[Layers.size() - 1][1].getInput()/*x*/ + Layers[Layers.size() - 1][1].getBais()/*b*/);
 	Output.push_back(Neuron::activationFunction(weightedSum));
-
-
-	
 
 }
 
@@ -190,26 +178,16 @@ int main()
 	tempNet.setInput(vector<double>{0.3, 0.6});
 
 	while (true) {
-		
+
 		double x, y;
 		cin >> x >> y;
 		tempNet.setInput(vector<double>{x, y});
 		tempNet.feedForward();
 
 		cout << "outputNuron1: " << tempNet.getOutput()[0];
-		cout << "\noutputNuron2: " << tempNet.getOutput()[1]<<endl;
+		cout << "\noutputNuron2: " << tempNet.getOutput()[1] << endl;
 		tempNet.resetOutput();
-		
-
-		
-
 	}
-
-
-
-
-
-
 }
 
 /*
@@ -223,7 +201,7 @@ int main()
 *
 *
 * missing, backpropagation! the delta, learning rate, and derivatevs.
-* 
+*
 * debug why out puts dont change even thought the inputs change
 
 
