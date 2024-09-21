@@ -276,6 +276,21 @@ void Network::costFunction(int WhichCostFunction)
 	}
 }
 
+void Network::derivativeOfCostFunction(int WhichCostFunction)
+{
+	switch (WhichCostFunction)
+	{
+	case MSE:
+		derivativeOfMSEcostFunction();
+		break;
+	case BCEL:
+		BinaryCrossEntropyLoss();
+		break;
+	default:
+		break;
+	}
+}
+
 void Network::MSEcostFunction()
 {
 	int sameIndex = 0;
@@ -285,8 +300,18 @@ void Network::MSEcostFunction()
 		cost += pow(singleOutputNeurons - desiredOutput[sameIndex], 2);
 		sameIndex++;
 	}
-	cost *= 0.5;
+	cost /= Output.size();
 	
+}
+
+void Network::derivativeOfMSEcostFunction()
+{
+	int sameIndex = 0;
+	for (auto& singleOutputNeurons : Output)
+	{
+		deltaCosts[sameIndex] = 2 * (singleOutputNeurons - desiredOutput[sameIndex]);
+		sameIndex++;
+	}
 }
 
 void Network::BinaryCrossEntropyLoss()
@@ -307,10 +332,9 @@ void Network::DerivativeOfBinaryCrossEntropyLoss()
 	deltaCosts.clear();
 	for (auto& singleOutputNeurons : Output)
 	{
-		deltaCosts.push_back((desiredOutput[sameIndex] / singleOutputNeurons + 1e-10) - ((1 - desiredOutput[sameIndex]) / (1 - Output[sameIndex] + 1e-10)));
+		deltaCosts.push_back((desiredOutput[sameIndex] / singleOutputNeurons + 1e-10) - ((1 - desiredOutput[sameIndex]) / (1 - singleOutputNeurons + 1e-10)));
 		sameIndex++;
 	}
-
 }
 
 int main()
