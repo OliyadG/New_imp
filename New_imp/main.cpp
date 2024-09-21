@@ -10,6 +10,7 @@ constexpr auto RELU = 2;
 
 constexpr auto MSE = 0;
 constexpr auto BCEL = 1;
+constexpr auto CBCEL = 2;
 
 
 
@@ -74,8 +75,8 @@ public:
 	double derivateOfTanhActivationFunction(double weightedSum);
 	
 
-	double sigmoidActivationFucntion(double weighted); 
-	double derivativeOfSigmoidFucntion();
+	double sigmoidActivationFucntion(double weightedSum); 
+	double derivativeOfSigmoidFucntion( double weightedSum);
 
 	double softMax();
 
@@ -87,8 +88,12 @@ public:
 
 	void MSEcostFunction();
 	void derivativeOfMSEcostFunction();
+
 	void BinaryCrossEntropyLoss();
 	void DerivativeOfBinaryCrossEntropyLoss();
+
+	void ClipedBinaryCrossEntropyLoss();
+	void DerivativeOfClipedBinaryCrossEntropyLoss();
 	
 
 
@@ -97,7 +102,7 @@ public:
 	vector<double> getOutput() { return Output; }
 	vector<double> getInput() { return Input; }
 	double getCost() { return cost; }
-	vector<double> getDeltacost0() { return deltaCosts; }
+	vector<double> getDeltacosts() { return deltaCosts; }
 
 	// temp sets
 	void setInput(vector<double> input) { Input = input; }
@@ -107,6 +112,7 @@ public:
 
 
 private:
+
 	vector<vector<Neuron>> Layers;
 	vector<double> Input;
 	vector<double> Output;
@@ -224,6 +230,13 @@ double Network::sigmoidActivationFucntion(double weightedSum)
 	return 1.0 / (1.0 + exp(-weightedSum));
 }
 
+double Network::derivativeOfSigmoidFucntion(double weightedSum)
+{
+	double sigmoid = sigmoidActivationFucntion(weightedSum);
+
+	return sigmoid * (1.0 - sigmoid);
+}
+
 void Network::feedForward()
 {
 	//intput // refract here so that its flexable
@@ -271,6 +284,8 @@ void Network::costFunction(int WhichCostFunction)
 	case BCEL:
 		BinaryCrossEntropyLoss();
 		break;
+	case CBCEL:
+		
 	default:
 		break;
 	}
@@ -323,6 +338,7 @@ void Network::BinaryCrossEntropyLoss()
 		cost -= (desiredOutput[sameIndex] * log(singleOutputNeurons) + (1 - desiredOutput[sameIndex] * log(1 - singleOutputNeurons)));
 		sameIndex++;
 	}
+	cost /= Output.size();
 
 }
 
@@ -332,7 +348,36 @@ void Network::DerivativeOfBinaryCrossEntropyLoss()
 	deltaCosts.clear();
 	for (auto& singleOutputNeurons : Output)
 	{
-		deltaCosts.push_back((desiredOutput[sameIndex] / singleOutputNeurons + 1e-10) - ((1 - desiredOutput[sameIndex]) / (1 - singleOutputNeurons + 1e-10)));
+		deltaCosts.push_back((desiredOutput[sameIndex] / singleOutputNeurons + 1e-10) - ((1 - desiredOutput[sameIndex]) / ((1 - singleOutputNeurons) + 1e-10)));
+		sameIndex++;
+	}
+}
+
+void Network::ClipedBinaryCrossEntropyLoss()
+{
+	int sameIndex = 0;
+	cost = 0;
+	for (auto& singleOutputNeurons : Output)
+	{
+		double clipedOutSafeValue = max(min(singleOutputNeurons, 1 - 1e-10), 1e-10);
+		cost -= (desiredOutput[sameIndex] * log(clipedOutSafeValue) + (1 - desiredOutput[sameIndex] * log(1 - clipedOutSafeValue)));
+		sameIndex++;
+	}
+	cost /= Output.size();
+}
+
+void Network::DerivativeOfClipedBinaryCrossEntropyLoss()
+{
+	int sameIndex = 0;
+	for (auto& singleOutputNeurons : Output)
+	{
+		// Clipping the output to avoid log(0) or division by zero
+		double clipedOutSafeValue = max(min(singleOutputNeurons, 1 - 1e-10), 1e-10);
+
+		// Calculate the gradient of the cost w.r.t each output neuron
+		deltaCosts[sameIndex] = -(desiredOutput[sameIndex] / clipedOutSafeValue) +
+			((1 - desiredOutput[sameIndex]) / (1 - clipedOutSafeValue));
+
 		sameIndex++;
 	}
 }
@@ -365,8 +410,10 @@ int main()
 
 		tempNet.BinaryCrossEntropyLoss();
 		tempNet.DerivativeOfBinaryCrossEntropyLoss();
+
+
 		cout <<"cost " << tempNet.getCost()<<endl;
-		cout << "deltacost0 " << tempNet.getDeltacost0();
+		cout << "deltacost0 " << tempNet.getDeltacosts();
 		tempNet.resetOutput();
 
 		
