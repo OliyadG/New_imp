@@ -39,8 +39,9 @@ private:
 	//construction of activation(w*x(wx+wx+wx)+b);
 	vector<double> w; //weights
 	double x_ActivatedInput; // X = activated(w+w2+w3+w4...wn)x0
-	double b_Bais = 1; // bias
+	double b_Bais; // bias
 	double weightedSum;//same as y! or output
+
 	
 
 };
@@ -94,6 +95,8 @@ public:
 
 	void ClipedBinaryCrossEntropyLoss();
 	void DerivativeOfClipedBinaryCrossEntropyLoss();
+
+	void backPropagation(int indexOfLayer, int indexOfneuron, double store);
 	
 
 
@@ -380,6 +383,41 @@ void Network::DerivativeOfClipedBinaryCrossEntropyLoss()
 
 		sameIndex++;
 	}
+}
+
+void Network::backPropagation(int indexOfLayer, int indexOfneuron, double store)
+{
+
+	double tempStore = store; // store = 0.7, cost/output
+	/*\
+	* output = tanh(w*x+b)
+	* store(0.7)* derivativeofactivation(w*x+b) *x(weightedsum)
+	* next we partially dervate for Ws that came in, they're inside x, w is constant now
+	* store*derivativeofactivaationfirst()*w*derivativeoftan(weightedsum x)* x*
+	
+	*/
+
+	for(int currentLayerIndex = indexOfLayer; currentLayerIndex > 0; currentLayerIndex-- )
+	{
+		for (int currentNeuronIndex = 0, size = Layers[currentLayerIndex].size(); currentNeuronIndex < size; currentNeuronIndex++)
+
+		{
+			double weightedsumgot = Layers[currentLayerIndex][currentNeuronIndex].getWeightedSum(); //{w9,0x w9,1x w9,2....) without activation
+
+			tempStore = store
+
+			tempStore = store*derivateOfTanhActivationFunction(Layers[currentLayerIndex][currentNeuronIndex].)
+		}
+		
+		tempStore = store*derivateOfTanhActivationFunction(singleNeuron.getWeightedSum())*
+
+
+	    double constantWeight = singleNeuron.getweightsAndConnections()[indexOfneuron/*front layers*/];
+	}
+
+	
+
+
 }
 
 int main()
