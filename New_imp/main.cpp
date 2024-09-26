@@ -385,29 +385,116 @@ void Network::DerivativeOfClipedBinaryCrossEntropyLoss()
 	}
 }
 
-void Network::backPropagation(int indexOfLayer, int indexOfneuron, double store)
+void Network::backPropagation(int indexOfLayer, int indexOfOutputNeurons, double store)
 {
 
-	double tempStore = store; // store = 0.7, cost/output
-	/*\
-	* output = tanh(w*x+b)
-	* store(0.7)* derivativeofactivation(w*x+b) *x(weightedsum)
-	* next we partially dervate for Ws that came in, they're inside x, w is constant now
-	* store*derivativeofactivaationfirst()*w*derivativeoftan(weightedsum x)* x*
-	
-	*/
+
+	int wholeLayerSize = Layers.size();
+
+	vector < vector < vector <double>>> calculatedGradient {wholeLayerSize};
+	vector < vector < vector <double>>> chainedStored {wholeLayerSize};
+
+	for (int currentLayerIndex = indexOfLayer; currentLayerIndex > 0; currentLayerIndex--)
+	{
+		
+
+
+		for (int indexOfFrontNeuron = 0, frontSize = Layers[currentLayerIndex].size(); indexOfFrontNeuron < frontSize; indexOfFrontNeuron++)
+		{
+			Neuron& FrontLayerNeuron = Layers[currentLayerIndex][indexOfFrontNeuron];
+			double weightedSumFrontNeuronGotFromWholeBackLayer = FrontLayerNeuron.getWeightedSum();//gets x, {x1, x2, x3, x4}
+			
+			//tempStore = store * /*change with reference as mentioned above*/
+
+
+			for (int indexOfBackNeuron = 0, backSize = Layers[currentLayerIndex - 1].size(); indexOfBackNeuron < backSize; indexOfBackNeuron++)
+			{
+				Neuron& backLayerNeuron = Layers[currentLayerIndex - 1][indexOfBackNeuron];
+				double weightedSumFrontNeuronGotFromWholeBackLayer = FrontLayerNeuron.getWeightedSum(); //{w9,0x w9,1x w9,2....) without activation
+
+				chainedStored[currentLayerIndex - 1][indexOfBackNeuron].push_back(chainedStored[currentLayerIndex][indexOfFrontNeuron]  derivateOfTanhActivationFunction(weightedSumFrontNeuronGotFromWholeBackLayer) * weightedSumFrontNeuronGotFromWholeBackLayer/*w10,0*/);
+		
+			
+				calculatedGradient[currentLayerIndex][indexOfBackNeuron];
+					 
+					 
+					 
+				for (int sizeOfConnection = 0, size = backLayerNeuron.getweightsAndConnections().size(); sizeOfConnection < size; sizeOfConnection++)
+				{
+
+					calculatedGradient[currentLayerIndex-1][indexOfBackNeuron][sizeOfConnection]
+
+				}
+			
+			
+			}
+				
+
+
+
+
+
+			}
+
+
+
+
+
+		}
+
+
+
+
+
+
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	double tempStore;
 
 	for(int currentLayerIndex = indexOfLayer; currentLayerIndex > 0; currentLayerIndex-- )
 	{
-		for (int currentNeuronIndex = 0, size = Layers[currentLayerIndex].size(); currentNeuronIndex < size; currentNeuronIndex++)
-
+		
+		//try to make a pointer or reference to an activatoin function to be called, by checking the flag and which activation/derivative is used, use that at derivatives down there
+		for (int indexOfFrontNeuron = 0, frontSize = Layers[currentLayerIndex].size(); indexOfFrontNeuron < frontSize; indexOfFrontNeuron++)
 		{
-			double weightedsumgot = Layers[currentLayerIndex][currentNeuronIndex].getWeightedSum(); //{w9,0x w9,1x w9,2....) without activation
+			Neuron& FrontLayerNeuron = Layers[currentLayerIndex][indexOfFrontNeuron];
+			double weightedSumFrontNeuronGotFromWholeBackLayer = FrontLayerNeuron.getWeightedSum(); //{w9,0x w9,1x w9,2....) without activation
+			tempStore = store * /*change with reference as mentioned above*/derivateOfTanhActivationFunction(weightedSumFrontNeuronGotFromWholeBackLayer) * weightedSumFrontNeuronGotFromWholeBackLayer/*w10,0*/;
 
-			tempStore = store
+			for (int indexOfBackNeuron = 0, backSize = Layers[currentLayerIndex - 1].size();  indexOfBackNeuron < backSize;  indexOfBackNeuron++)
+			{
+				Neuron& backLayerNeuron = Layers[currentLayerIndex - 1][indexOfBackNeuron];
+				double& oldWeightOfBackNeron = backLayerNeuron.getweightsAndConnections()[indexOfFrontNeuron];
+				double backNeuronWeightedSum = backLayerNeuron.getWeightedSum();
+				double newWeightOfBackNeron = tempStore * backNeuronWeightedSum/*x*/;
+				oldWeightOfBackNeron -= 0.2 * newWeightOfBackNeron;
 
-			tempStore = store*derivateOfTanhActivationFunction(Layers[currentLayerIndex][currentNeuronIndex].)
+				
+			}
+			
+
+			
+			
 		}
+
+
+
+		Layers[currentLayerIndex][indexOfFrontNueron].size
 		
 		tempStore = store*derivateOfTanhActivationFunction(singleNeuron.getWeightedSum())*
 
