@@ -116,6 +116,9 @@ public:
 
 private:
 
+
+
+	vector<vector<vector<double>>> calculatedGradient;
 	vector<vector<Neuron>> Layers;
 	vector<double> Input;
 	vector<double> Output;
@@ -125,11 +128,41 @@ private:
 
 	double cost;
 	vector<double> deltaCosts;
+
+
+
+	//static networksizes
+	static int networklayerSize;
+	static int inputLayersize;
+	static int outputLayerSize;
+
 };
 
 Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int numberOfHiddenNeurons, int numberOfOutputNuerons)
 {
-	vector<vector<Neuron>> tempLayer(1 + numberOfHiddenLayers + 1);//supparated the inputlayer and the outputlayers
+
+
+	Network::networklayerSize = 1 + numberOfHiddenLayers + 1;
+
+	vector<vector<Neuron>> tempLayer(networklayerSize);//supparated the inputlayer and the outputlayers
+
+	//pre-allocate gradient
+	//3d construction
+	calculatedGradient.resize(networklayerSize); //wholesize
+	calculatedGradient.push_back(vector<vector<double>>(numberOfInputLayersNeuron)); //0th index having 2 2d 
+
+
+	calculatedGradient.resize(networklayerSize); //wholesize = 4 allocated
+	vector<vector<double>> firstlayer(numberOfInputLayersNeuron); // numberOfInputLayersNeuron = 2 allocated
+	vector<double> weightsize(numberOfHiddenNeurons);             //numberOfHiddenNeurons = 3 allocated
+	firstlayer.push_back(weightsize); //0th [0][3] allocated
+	firstlayer.push_back(weightsize); //1st [1][3] allocated
+	calculatedGradient.push_back(firstlayer); //[0][2][3] size allocated; all the above for this! tidious!
+
+	
+
+	
+	calculatedGradient.push_back(vector<vector<double>>(numberOfHiddenNeurons))
 
 	//inputLayer made
 	for (int countInputLayers = 0; countInputLayers < numberOfInputLayersNeuron; countInputLayers++)
@@ -188,9 +221,10 @@ void Network::feedForwardFlexableOutputs(int WhichActivationFunc)
 			auto& lastLayer = Layers.back();
 			for (auto& outputNeurons : lastLayer)
 			{
-				outputNeurons.setWeightedSum(outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/);
+				//outputNeurons.setWeightedSum(outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/);
 				//store outputs
-				Output.push_back(tanhActivationFunction(outputNeurons.getWeightedSum()));
+				double weightedSum = outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/;
+				Output.push_back(tanhActivationFunction(weightedSum));
 			}
 			break;
 
@@ -198,9 +232,10 @@ void Network::feedForwardFlexableOutputs(int WhichActivationFunc)
 		auto& lastLayer = Layers.back();
 		for (auto& outputNeurons : lastLayer)
 		{
-			outputNeurons.setWeightedSum(outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/);
+			//outputNeurons.setWeightedSum(outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/);//i dont think this is needed here since the front feed had it calculated for us, weighted sum comes from that
 			//store outputs
-			Output.push_back(sigmoidActivationFucntion(outputNeurons.getWeightedSum()));
+			double weightedSum = outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/;
+			Output.push_back(sigmoidActivationFucntion(weightedSum));
 		}
 		break;
 
@@ -389,101 +424,71 @@ void Network::backPropagation(int indexOfLayer, int indexOfOutputNeurons, double
 {
 
 
-	int wholeLayerSize = Layers.size();
-
-	vector < vector < vector <double>>> calculatedGradient{ wholeLayerSize };
-	vector < vector <double>> chainedStored{ wholeLayerSize };
+	
+	vector < vector < vector <double>>> calculatedGradient;
+	vector < vector <double>> chainedStored;
 	int indexOfFrontNeuron;
 	int indexOfBackNeuron;
 
+
+
+
+
+
+    // gradient for last layer;
+	int indexOfLastNeuron = 0;
+	for (auto deltacost : deltaCosts)
+	{
+		double w = Layers[indexOfLayer][indexOfLastNeuron].getweightsAndConnections()[0];
+		double x = Layers[indexOfLayer][indexOfLastNeuron].getWeightedSum();
+		double b = Layers[indexOfLayer][indexOfLastNeuron].getBais();
+
+		double weightedSumOfTheOutput = w * x + b;
+		chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivativeOfSigmoidFucntion(w * x + b));     //temporary chain
+		calculatedGradient[indexOfLayer][indexOfLastNeuron][0] = chainedStored[indexOfLayer][indexOfLastNeuron] * x;
+		chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivativeOfSigmoidFucntion(w * x + b) * w * derivateOfTanhActivationFunction(x)); // chained stored
+		
+		indexOfLastNeuron++;
+	}
+	
+	
+
+
+
+
+
+
+
 	for (int currentLayerIndex = indexOfLayer; currentLayerIndex > 0; currentLayerIndex--)
 	{
-		indexOfBackNeuron = 0;
+		indexOfBackNeuron = 0;//leave me alone
+
+
+		//back neuron
 		for (int backSize = Layers[currentLayerIndex - 1].size(); indexOfBackNeuron < backSize; indexOfBackNeuron++)
 		{
-			indexOfFrontNeuron = 0;
-			Neuron& backLayerNeuron = Layers[currentLayerIndex - 1][indexOfBackNeuron];
-			vector<double>& backWieght = backLayerNeuron.getweightsAndConnections();
-			double backWeightedSum = backLayerNeuron.getWeightedSum();
+			indexOfFrontNeuron = 0;//leave me alone
 
+			Neuron& backLayerNeuron = Layers[currentLayerIndex - 1][indexOfBackNeuron];
+			vector<double>& backWieght = backLayerNeuron.getweightsAndConnections(); //w
+			double backWeightedSum = backLayerNeuron.getWeightedSum(); //x
 			double tempChained = 0.0;
 
-
+			//front nueron
 			for (int frontSize = Layers[currentLayerIndex].size(); indexOfFrontNeuron < frontSize; indexOfFrontNeuron++)
 			{
 				Neuron& FrontLayerNeuron = Layers[currentLayerIndex][indexOfFrontNeuron];
-				vector<double> weightOfFrontNeuron = FrontLayerNeuron.getweightsAndConnections();
-
-
-				calculatedGradient[currentLayerIndex - 1][indexOfBackNeuron][indexOfFrontNeuron] = chainedStored[currentLayerIndex][indexOfFrontNeuron] * backLayerNeuron.getWeightedSum();
-
+				calculatedGradient[currentLayerIndex - 1][indexOfBackNeuron][indexOfFrontNeuron] = chainedStored[currentLayerIndex][indexOfFrontNeuron]/*derivative of thanh(x)*/ * backLayerNeuron.getWeightedSum()/* x of current*/;
 				tempChained += (chainedStored[currentLayerIndex][indexOfFrontNeuron] * backWieght[indexOfFrontNeuron] * derivateOfTanhActivationFunction(backWeightedSum));
 
-
-
-
-
-
 			}
-
-
+			chainedStored[currentLayerIndex - 1][indexOfBackNeuron] = tempChained;
+			
 
 		}
 
 
 	}
-
-
-}
-
-
-
-
-
-
-
-
-
-
-	double tempStore;
-
-	for(int currentLayerIndex = indexOfLayer; currentLayerIndex > 0; currentLayerIndex-- )
-	{
-		
-		//try to make a pointer or reference to an activatoin function to be called, by checking the flag and which activation/derivative is used, use that at derivatives down there
-		for (int indexOfFrontNeuron = 0, frontSize = Layers[currentLayerIndex].size(); indexOfFrontNeuron < frontSize; indexOfFrontNeuron++)
-		{
-			Neuron& FrontLayerNeuron = Layers[currentLayerIndex][indexOfFrontNeuron];
-			double weightedSumFrontNeuronGotFromWholeBackLayer = FrontLayerNeuron.getWeightedSum(); //{w9,0x w9,1x w9,2....) without activation
-			tempStore = store * /*change with reference as mentioned above*/derivateOfTanhActivationFunction(weightedSumFrontNeuronGotFromWholeBackLayer) * weightedSumFrontNeuronGotFromWholeBackLayer/*w10,0*/;
-
-			for (int indexOfBackNeuron = 0, backSize = Layers[currentLayerIndex - 1].size();  indexOfBackNeuron < backSize;  indexOfBackNeuron++)
-			{
-				Neuron& backLayerNeuron = Layers[currentLayerIndex - 1][indexOfBackNeuron];
-				double& oldWeightOfBackNeron = backLayerNeuron.getweightsAndConnections()[indexOfFrontNeuron];
-				double backNeuronWeightedSum = backLayerNeuron.getWeightedSum();
-				double newWeightOfBackNeron = tempStore * backNeuronWeightedSum/*x*/;
-				oldWeightOfBackNeron -= 0.2 * newWeightOfBackNeron;
-
-				
-			}
-			
-
-			
-			
-		}
-
-
-
-		Layers[currentLayerIndex][indexOfFrontNueron].size
-		
-		tempStore = store*derivateOfTanhActivationFunction(singleNeuron.getWeightedSum())*
-
-
-	    double constantWeight = singleNeuron.getweightsAndConnections()[indexOfneuron/*front layers*/];
-	}
-
-	
 
 
 }
@@ -499,6 +504,11 @@ int main()
 
 
 	Network tempNet = Network(2, 10, 10, 1);
+
+
+
+
+
 	auto Layers = tempNet.getLayers();
 	//tempNet.setInput(vector<double>{0.3, 0.6});
 	tempNet.setDesiredOutput(desiredOutput);
