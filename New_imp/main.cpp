@@ -2,6 +2,7 @@
 #include<vector>
 #include<math.h>
 #include<random>
+#include <chrono>
 using namespace std;
 
 constexpr auto TANH = 0;;
@@ -12,6 +13,11 @@ constexpr auto MSE = 0;
 constexpr auto BCEL = 1;
 constexpr auto CBCEL = 2;
 
+
+static int networkLayerSize;
+static int inputLayersize;
+static int hiddenLayersize;
+static int outputLayerSize;
 
 
 
@@ -114,11 +120,23 @@ public:
 	void setDesiredOutput(vector<double> desire) { desiredOutput = desire; }
 
 
+
+
+
+
+	//public variables
+	int networkLayerSize;
+	int inputLayersize;
+	int hiddenLayersize;
+	int outputLayerSize;
+
+
 private:
 
 
 
 	vector<vector<vector<double>>> calculatedGradient;
+	vector < vector <double>> chainedStored;
 	vector<vector<Neuron>> Layers;
 	vector<double> Input;
 	vector<double> Output;
@@ -132,9 +150,7 @@ private:
 
 
 	//static networksizes
-	static int networklayerSize;
-	static int inputLayersize;
-	static int outputLayerSize;
+
 
 };
 
@@ -142,27 +158,72 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 {
 
 
-	Network::networklayerSize = 1 + numberOfHiddenLayers + 1;
-
-	vector<vector<Neuron>> tempLayer(networklayerSize);//supparated the inputlayer and the outputlayers
-
-	//pre-allocate gradient
-	//3d construction
-	calculatedGradient.resize(networklayerSize); //wholesize
-	calculatedGradient.push_back(vector<vector<double>>(numberOfInputLayersNeuron)); //0th index having 2 2d 
-
-
-	calculatedGradient.resize(networklayerSize); //wholesize = 4 allocated
-	vector<vector<double>> firstlayer(numberOfInputLayersNeuron); // numberOfInputLayersNeuron = 2 allocated
-	vector<double> weightsize(numberOfHiddenNeurons);             //numberOfHiddenNeurons = 3 allocated
-	firstlayer.push_back(weightsize); //0th [0][3] allocated
-	firstlayer.push_back(weightsize); //1st [1][3] allocated
-	calculatedGradient.push_back(firstlayer); //[0][2][3] size allocated; all the above for this! tidious!
+	networkLayerSize = 1 + numberOfHiddenLayers + 1;
+	inputLayersize = numberOfInputLayersNeuron;
+	hiddenLayersize = numberOfHiddenNeurons;
+	outputLayerSize = numberOfOutputNuerons;
 
 	
 
+	this->cost = 0.0;
+	this->etaLearningRate = 0.0;
+
+	//forchained stored allocations
+
+
+
 	
-	calculatedGradient.push_back(vector<vector<double>>(numberOfHiddenNeurons))
+
+	// if the network has a fixed sizes \/\/\/\/\/ would be enough
+	// vector<vector<vector<double>>> calculatedGradient(maxLayerSize, vector<vector<double>>(maxNeuronSize, vector<double>(maxWeightSize)));
+
+
+	auto start = std::chrono::high_resolution_clock::now();//-------------------------------------------------------------------time cost calculation
+
+	calculatedGradient = vector<vector<vector<double>>>(networkLayerSize);//gradient allocation
+	chainedStored = vector<vector<double>> (networkLayerSize); // chainedstore allocatio
+	// Allocate first layer
+	calculatedGradient[0].resize(numberOfInputLayersNeuron, vector<double>(numberOfHiddenNeurons));
+	chainedStored[0].resize(numberOfInputLayersNeuron);
+	// Allocate hidden layers
+	for (int i = 1; i < networkLayerSize - 1; i++) {
+		if (i == networkLayerSize - 2) {
+			calculatedGradient[i].resize(numberOfHiddenNeurons, vector<double>(numberOfOutputNuerons));
+			chainedStored[i].resize(numberOfHiddenNeurons);
+		}
+		else {
+			calculatedGradient[i].resize(numberOfHiddenNeurons, vector<double>(numberOfHiddenNeurons));
+			chainedStored[i].resize(numberOfHiddenNeurons);
+		}
+	}
+	// Allocate last layer
+	calculatedGradient[networkLayerSize - 1].resize(numberOfOutputNuerons, vector<double>(1));
+	chainedStored[networkLayerSize - 1].resize(numberOfOutputNuerons);
+
+
+
+
+	auto stop = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+
+	std::cout << "---Time taken: " << duration.count() << " microseconds" << std::endl;
+
+	//---------------------------------------------------------------------------------------------------------------time cost
+
+
+
+
+
+
+
+	
+	Input = vector<double>(numberOfInputLayersNeuron);//-------------------------------------------------------------size of input
+
+
+
+
+
+	vector<vector<Neuron>> tempLayer(networkLayerSize);//supparated the inputlayer and the outputlayers
 
 	//inputLayer made
 	for (int countInputLayers = 0; countInputLayers < numberOfInputLayersNeuron; countInputLayers++)
@@ -214,30 +275,34 @@ double Network::getWeightedSum(int layerIndex, int neuronIndex)
 
 void Network::feedForwardFlexableOutputs(int WhichActivationFunc)
 {
+	auto& lastLayer = Layers.back();
 	
 	switch (WhichActivationFunc)
 	{
 	case TANH:
-			auto& lastLayer = Layers.back();
+			
 			for (auto& outputNeurons : lastLayer)
 			{
 				//outputNeurons.setWeightedSum(outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/);
 				//store outputs
 				double weightedSum = outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/;
 				Output.push_back(tanhActivationFunction(weightedSum));
+
+				cout << "last layer weighted sums not output! : " << outputNeurons.getWeightedSum()<<endl<<"----\n";
 			}
 			break;
 
 	case SIGMOID:
-		auto& lastLayer = Layers.back();
-		for (auto& outputNeurons : lastLayer)
-		{
-			//outputNeurons.setWeightedSum(outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/);//i dont think this is needed here since the front feed had it calculated for us, weighted sum comes from that
-			//store outputs
-			double weightedSum = outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/;
-			Output.push_back(sigmoidActivationFucntion(weightedSum));
-		}
-		break;
+		
+			for (auto& outputNeurons : lastLayer)
+			{
+				//outputNeurons.setWeightedSum(outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/);//i dont think this is needed here since the front feed had it calculated for us, weighted sum comes from that
+				//store outputs
+				double weightedSum = outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/;
+				Output.push_back(sigmoidActivationFucntion(weightedSum));
+				cout << "last layer weighted sums not output! : " << outputNeurons.getWeightedSum() << endl <<"bruh activated alew?: output "<< Output.back()<<endl<<" weightedsum output:"<<weightedSum << "----\n";
+			}
+			break;
 
 	default:
 		break;
@@ -302,7 +367,7 @@ void Network::feedForward()
 			//cout<<"\n" << Layers[singleLayer + 1][singleNeuron].getInput() << "****************************** end" << endl;
 
 			//cout << "Weightedsum: =" << weightedSum << endl << "Activated: = " << Activated << endl << endl;
-
+			//cout << "\ninputs weightedsum: " << Layers[0][0].getWeightedSum() << "second: weightedsum" << Layers[0][1].getWeightedSum()<<endl;
 		}
 	}
 
@@ -425,7 +490,7 @@ void Network::backPropagation(int indexOfLayer, int indexOfOutputNeurons, double
 
 
 	
-	vector < vector < vector <double>>> calculatedGradient;
+	
 	vector < vector <double>> chainedStored;
 	int indexOfFrontNeuron;
 	int indexOfBackNeuron;
@@ -495,6 +560,33 @@ void Network::backPropagation(int indexOfLayer, int indexOfOutputNeurons, double
 
 int main()
 {
+	//auto start = std::chrono::high_resolution_clock::now();//-------------------------------------------------------------------time cost calculation
+	// 
+	//auto stop = std::chrono::high_resolution_clock::now();
+	//auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+	//std::cout << "Time taken: " << duration.count() << " microseconds" << std::endl;
+
+
+	Network tempNet = Network(2, 4, 4, 1);
+	
+	vector<vector<Neuron>> Layers = tempNet.getLayers();
+	return 0;
+	//step #1 set input
+	tempNet.setInput(vector<double>{0.3, 0.6}); //-----------------------passed!
+
+	//step #2 feedforward.
+	tempNet.feedForward(); //--------------------------------------------passed!
+
+
+	
+
+
+
+
+
+
+
+/*
 	vector<double> Input;
 	vector<double> Output;
 	vector<double> desiredOutput{vector<double>{1, 1}};
@@ -510,7 +602,7 @@ int main()
 
 
 	auto Layers = tempNet.getLayers();
-	//tempNet.setInput(vector<double>{0.3, 0.6});
+	tempNet.setInput(vector<double>{0.3, 0.6});
 	tempNet.setDesiredOutput(desiredOutput);
 
 	while (true) {
@@ -529,11 +621,12 @@ int main()
 
 
 		cout <<"cost " << tempNet.getCost()<<endl;
-		cout << "deltacost0 " << tempNet.getDeltacosts();
+		//cout << "deltacost0 " << tempNet.getDeltacosts();
 		tempNet.resetOutput();
 
 		
 	}
+	*/
 }
 
 /*
