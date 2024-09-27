@@ -157,18 +157,20 @@ private:
 Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int numberOfHiddenNeurons, int numberOfOutputNuerons)
 {
 
+	//initializations
 
 	networkLayerSize = 1 + numberOfHiddenLayers + 1;
 	inputLayersize = numberOfInputLayersNeuron;
 	hiddenLayersize = numberOfHiddenNeurons;
 	outputLayerSize = numberOfOutputNuerons;
 
-	
+	//Input = vector<double>(numberOfInputLayersNeuron);//-------------------------------------------------------------size of input
+	//Output = vector<double>(numberOfOutputNuerons); //---------------------------------------------------------------size of output
+	//deltaCosts = vector<double>(numberOfOutputNuerons);//------------------------------------------------------------size of deltaCost
+	cost = 0.0;
+	etaLearningRate = 0.0;
 
-	this->cost = 0.0;
-	this->etaLearningRate = 0.0;
 
-	//forchained stored allocations
 
 
 
@@ -178,7 +180,7 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 	// vector<vector<vector<double>>> calculatedGradient(maxLayerSize, vector<vector<double>>(maxNeuronSize, vector<double>(maxWeightSize)));
 
 
-	auto start = std::chrono::high_resolution_clock::now();//-------------------------------------------------------------------time cost calculation
+	//auto start = std::chrono::high_resolution_clock::now();//-------------------------------------------------------------------time cost calculation
 
 	calculatedGradient = vector<vector<vector<double>>>(networkLayerSize);//gradient allocation
 	chainedStored = vector<vector<double>> (networkLayerSize); // chainedstore allocatio
@@ -203,10 +205,10 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 
 
 
-	auto stop = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+	//auto stop = std::chrono::high_resolution_clock::now();
+	//auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
-	std::cout << "---Time taken: " << duration.count() << " microseconds" << std::endl;
+	//std::cout << "---Time taken: " << duration.count() << " microseconds" << std::endl;
 
 	//---------------------------------------------------------------------------------------------------------------time cost
 
@@ -217,7 +219,6 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 
 
 	
-	Input = vector<double>(numberOfInputLayersNeuron);//-------------------------------------------------------------size of input
 
 
 
@@ -288,7 +289,7 @@ void Network::feedForwardFlexableOutputs(int WhichActivationFunc)
 				double weightedSum = outputNeurons.getweightsAndConnections()[0]/*w*/ * outputNeurons.getInput()/*x*/ + outputNeurons.getBais()/*b*/;
 				Output.push_back(tanhActivationFunction(weightedSum));
 
-				cout << "last layer weighted sums not output! : " << outputNeurons.getWeightedSum()<<endl<<"----\n";
+				//cout << "last layer weighted sums not output! : " << outputNeurons.getWeightedSum()<<endl<<"----\n";
 			}
 			break;
 
@@ -373,7 +374,7 @@ void Network::feedForward()
 
 
 	//output
-	feedForwardFlexableOutputs();
+	feedForwardFlexableOutputs(SIGMOID);
 
 }
 
@@ -388,6 +389,8 @@ void Network::costFunction(int WhichCostFunction)
 		BinaryCrossEntropyLoss();
 		break;
 	case CBCEL:
+		ClipedBinaryCrossEntropyLoss();
+		break;
 		
 	default:
 		break;
@@ -402,7 +405,10 @@ void Network::derivativeOfCostFunction(int WhichCostFunction)
 		derivativeOfMSEcostFunction();
 		break;
 	case BCEL:
-		BinaryCrossEntropyLoss();
+		DerivativeOfBinaryCrossEntropyLoss();
+		break;
+	case CBCEL:
+		DerivativeOfClipedBinaryCrossEntropyLoss();
 		break;
 	default:
 		break;
@@ -438,7 +444,7 @@ void Network::BinaryCrossEntropyLoss()
 	cost = 0;
 	for (auto& singleOutputNeurons : Output)
 	{
-		cost -= (desiredOutput[sameIndex] * log(singleOutputNeurons) + (1 - desiredOutput[sameIndex] * log(1 - singleOutputNeurons)));
+		cost -= (desiredOutput[sameIndex] * log(singleOutputNeurons) + (1 - desiredOutput[sameIndex]) * log(1 - singleOutputNeurons));
 		sameIndex++;
 	}
 	cost /= Output.size();
@@ -560,22 +566,44 @@ void Network::backPropagation(int indexOfLayer, int indexOfOutputNeurons, double
 
 int main()
 {
-	//auto start = std::chrono::high_resolution_clock::now();//-------------------------------------------------------------------time cost calculation
-	// 
-	//auto stop = std::chrono::high_resolution_clock::now();
-	//auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
-	//std::cout << "Time taken: " << duration.count() << " microseconds" << std::endl;
+	auto start = std::chrono::high_resolution_clock::now();//-------------------------------------------------------------------time cost calculation
+	auto stop = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+	std::cout << "Time taken: " << duration.count() << " microseconds" << std::endl;
 
 
-	Network tempNet = Network(2, 4, 4, 1);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     Network tempNet = Network(2, 3, 3, 1);
 	
 	vector<vector<Neuron>> Layers = tempNet.getLayers();
-	return 0;
-	//step #1 set input
-	tempNet.setInput(vector<double>{0.3, 0.6}); //-----------------------passed!
 
-	//step #2 feedforward.
-	tempNet.feedForward(); //--------------------------------------------passed!
+	//step #1 set input and desired output //--------------------------------------passed!
+	tempNet.setInput(vector<double>{0.3, 0.6});
+	tempNet.setDesiredOutput(vector<double>{1});
+
+	//step #2 feedforward.//-------------------------------------------------------passed!
+	tempNet.feedForward(); 
+
+	//step #3 calculate cost   //--------------------------------------------------passed!
+	tempNet.costFunction(BCEL);
+
+	//step #4 calculate cost/output
+
 
 
 	
