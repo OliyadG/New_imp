@@ -391,69 +391,50 @@ void Network::backPropagation(int indexOfLayer, int indexOfOutputNeurons, double
 
 	int wholeLayerSize = Layers.size();
 
-	vector < vector < vector <double>>> calculatedGradient {wholeLayerSize};
-	vector < vector < vector <double>>> chainedStored {wholeLayerSize};
+	vector < vector < vector <double>>> calculatedGradient{ wholeLayerSize };
+	vector < vector <double>> chainedStored{ wholeLayerSize };
+	int indexOfFrontNeuron;
+	int indexOfBackNeuron;
 
 	for (int currentLayerIndex = indexOfLayer; currentLayerIndex > 0; currentLayerIndex--)
 	{
-		
-
-
-		for (int indexOfFrontNeuron = 0, frontSize = Layers[currentLayerIndex].size(); indexOfFrontNeuron < frontSize; indexOfFrontNeuron++)
+		indexOfBackNeuron = 0;
+		for (int backSize = Layers[currentLayerIndex - 1].size(); indexOfBackNeuron < backSize; indexOfBackNeuron++)
 		{
-			Neuron& FrontLayerNeuron = Layers[currentLayerIndex][indexOfFrontNeuron];
-			double weightedSumFrontNeuronGotFromWholeBackLayer = FrontLayerNeuron.getWeightedSum();//gets x, {x1, x2, x3, x4}
-			
-			//tempStore = store * /*change with reference as mentioned above*/
+			indexOfFrontNeuron = 0;
+			Neuron& backLayerNeuron = Layers[currentLayerIndex - 1][indexOfBackNeuron];
+			vector<double>& backWieght = backLayerNeuron.getweightsAndConnections();
+			double backWeightedSum = backLayerNeuron.getWeightedSum();
+
+			double tempChained = 0.0;
 
 
-			for (int indexOfBackNeuron = 0, backSize = Layers[currentLayerIndex - 1].size(); indexOfBackNeuron < backSize; indexOfBackNeuron++)
+			for (int frontSize = Layers[currentLayerIndex].size(); indexOfFrontNeuron < frontSize; indexOfFrontNeuron++)
 			{
-				Neuron& backLayerNeuron = Layers[currentLayerIndex - 1][indexOfBackNeuron];
-				double weightedSumFrontNeuronGotFromWholeBackLayer = FrontLayerNeuron.getWeightedSum(); //{w9,0x w9,1x w9,2....) without activation
+				Neuron& FrontLayerNeuron = Layers[currentLayerIndex][indexOfFrontNeuron];
+				vector<double> weightOfFrontNeuron = FrontLayerNeuron.getweightsAndConnections();
 
-				chainedStored[currentLayerIndex - 1][indexOfBackNeuron].push_back(chainedStored[currentLayerIndex][indexOfFrontNeuron]  derivateOfTanhActivationFunction(weightedSumFrontNeuronGotFromWholeBackLayer) * weightedSumFrontNeuronGotFromWholeBackLayer/*w10,0*/);
-		
-			
-				calculatedGradient[currentLayerIndex][indexOfBackNeuron];
-					 
-					 
-					 
-				for (int sizeOfConnection = 0, size = backLayerNeuron.getweightsAndConnections().size(); sizeOfConnection < size; sizeOfConnection++)
-				{
 
-					calculatedGradient[currentLayerIndex-1][indexOfBackNeuron][sizeOfConnection]
+				calculatedGradient[currentLayerIndex - 1][indexOfBackNeuron][indexOfFrontNeuron] = chainedStored[currentLayerIndex][indexOfFrontNeuron] * backLayerNeuron.getWeightedSum();
 
-				}
-			
-			
-			}
-				
+				tempChained += (chainedStored[currentLayerIndex][indexOfFrontNeuron] * backWieght[indexOfFrontNeuron] * derivateOfTanhActivationFunction(backWeightedSum));
+
 
 
 
 
 
 			}
-
-
 
 
 
 		}
 
 
-
-
-
-
 	}
 
 
-
-
-
-
+}
 
 
 
