@@ -38,7 +38,7 @@ public:
 		return velocities;
 	}
 
-
+	//another thing
 	// temp sets
 	void set_xInput(double x) { x_ActivatedInput = x; }
 	void resetX() { x_ActivatedInput = 0; }
