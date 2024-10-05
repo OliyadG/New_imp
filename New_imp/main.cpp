@@ -70,7 +70,8 @@ void Neuron::makeConnections(int numberOfNextLayerNeurons)
 	}
 	
 
-	b_Bais = dist(random_engine) * 0.5;
+	//b_Bais = dist(random_engine) * 0.5;
+	b_Bais = 0; //change
 }
 
 class Network {
@@ -608,16 +609,22 @@ void Network::backPropagationPropagate()
 			for (int numberOfWeight = 0; numberOfWeight < weightsize; numberOfWeight++)
 			{
 				//cout << " \n = old*****************: " << Layerweights[numberOfWeight] << endl;
-			//	cout << "[" << numberofLayer << "][" << numberOfneuron << "][" << numberOfWeight << "]" << endl;// << Layerweights[numberOfWeight] << " + " << calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight];
-			//	cout << "******** the gradient: " << calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight] << endl;
+				//cout << "[" << numberofLayer << "][" << numberOfneuron << "][" << numberOfWeight << "]" << endl;// << Layerweights[numberOfWeight] << " + " << calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight];
+				//cout << "******** the gradient: " << calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight] << endl;
 				
 				//(calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight] < 0 && Layers[numberofLayer][numberOfneuron].getweightsAndConnections()[numberOfWeight] < 0)?  Layers[numberofLayer][numberOfneuron].getweightsAndConnections()[numberOfWeight] += -1*calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight] : Layers[numberofLayer][numberOfneuron].getweightsAndConnections()[numberOfWeight] += calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight];//change
-			//	cout << " \n = updated*****************: " << Layerweights[numberOfWeight]<<endl;
-				Layers[numberofLayer][numberOfneuron].getweightsAndConnections()[numberOfWeight] +=  calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight];
+				//cout << " \n = updated*****************: " << Layerweights[numberOfWeight]<<endl;
+				if (desiredOutput[0] == 0.999)
+				{
+					Layerweights[numberOfWeight] -= calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight]/10;
+				}
+				else {
+					Layerweights[numberOfWeight] += calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight]/100;//change +
+				}
 				
 
 			}
-		//	cout << "***endl weight***\n";
+			//cout << "***endl weight***\n";
 		}
 	}
 }
@@ -637,9 +644,9 @@ pair<vector<vector<double>>, vector<double>> trainingGen(int size = 1000)
 	mt19937 gen(rd());
 	uniform_int_distribution<> distrib(0, 1); // Use binary distribution for XOR-like data
 
-	if (size == 1000)
+	if (size == 100 || size == 1000 || size == 10)
 	{
-		for (int a = 0; a < size / 4; ++a) {
+		for (int a = 0; a < size / 2; ++a) {
 			// Generate random inputs
 			int x1 = distrib(gen);
 			int x2 = distrib(gen);
@@ -650,10 +657,13 @@ pair<vector<vector<double>>, vector<double>> trainingGen(int size = 1000)
 			//		tempDataInput.push_back({ static_cast<double>(x1), static_cast<double>(x2) });
 			//      tempDataDesire.push_back(desired_output);
 
-			tempDataInput.push_back({ static_cast<double>(0), static_cast<double>(0) });//remove
-			tempDataDesire.push_back(0);
-			tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(1) });//remove
-			tempDataDesire.push_back(0);
+			tempDataInput.push_back({ static_cast<double>(0.001), static_cast<double>(0.001) });//remove
+			tempDataDesire.push_back(0.001);
+			tempDataInput.push_back({ static_cast<double>(0.999), static_cast<double>(0.999) });//remove
+			tempDataDesire.push_back(0.001);
+
+			//tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(1) });//remove
+			//tempDataDesire.push_back(-1);
 
 
 		}
@@ -671,10 +681,12 @@ pair<vector<vector<double>>, vector<double>> trainingGen(int size = 1000)
 			//		tempDataInput.push_back({ static_cast<double>(x1), static_cast<double>(x2) });
 			//      tempDataDesire.push_back(desired_output);
 
-			tempDataInput.push_back({ static_cast<double>(0), static_cast<double>(1) });//remove
-			tempDataDesire.push_back(1);
-			tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(0) });//remove
-			tempDataDesire.push_back(1);
+			tempDataInput.push_back({ static_cast<double>(0.001), static_cast<double>(0.999) });//remove
+			tempDataDesire.push_back(0.999);
+
+			tempDataInput.push_back({ static_cast<double>(0.999), static_cast<double>(0.001) });//remove
+			tempDataDesire.push_back(0.999);
+
 
 
 		}
@@ -740,6 +752,8 @@ int main()
 
 	int epoch = 1001;
 
+	train:
+
 	auto pairedInputAndDesire = trainingGen(epoch);
 
 
@@ -802,7 +816,7 @@ int main()
 			   tempNet.derivativeOfCostFunction(BCEL);
 
 			   //steo #5 do a gradientcalculation
-			   tempNet.backPropagationCalculateGradient(6, 0);
+			   tempNet.backPropagationCalculateGradient(7, 0);
 			   //tempNet.SecondBackPropagationCalculateGradient(5, 0);//remove
 			   //step #6 do a back prop
 			   tempNet.backPropagationPropagate();
@@ -841,7 +855,41 @@ int main()
 			   tempNet.resetGradient();
 			   tempNet.allocGradientAndChained();
 			   count++;
+
+			   if (epoch == 50)
+			   {
+				   epoch = 500;
+				   break;
+			   }
 	}
+
+	cout << "\n*********TESS***********\n";
+	int ask= 0;
+	while (ask != 99)
+	{
+		int input;
+		vector<double> tempinputVec;
+		cout << "\nstart: ";
+		cin >> input;
+		tempinputVec.push_back(input);
+		cin >> input;
+		tempinputVec.push_back(input);
+
+		tempNet.setInput(tempinputVec);
+
+		tempNet.feedForward();
+
+		cout << tempNet.getOutput()[0];
+
+		tempNet.resetOutput();
+		tempNet.resetDesired();
+		tempNet.resetInput();
+
+		cout << "\ncontinue?: ";
+		cin >> ask;
+		if (ask == 901) { goto train; }
+	}
+
 
 	cout << "*******************************WEIGHTS****************************\n";
 	//get weights
@@ -954,6 +1002,16 @@ int main()
 * you might be able to utilize recurrsion, or even matrixs...because at one go you might be able to calculate the derivative of 
 * a layers neurons, because you cant go past without first adjesting!
 * 
+
+
+
+*/
+
+
+
+/*
+* impliment a do you want to stop?
+*  
 
 
 
