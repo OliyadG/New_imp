@@ -22,12 +22,19 @@ constexpr auto SOFTMAX = 11;
 constexpr auto MSE = 0;
 constexpr auto BCEL = 1;
 constexpr auto CBCEL = 2;
+constexpr auto CCE = 3;
+constexpr auto HUBER = 4;
+constexpr auto FOCAL = 5;
+constexpr auto DICE = 6;
 
 
 static int networkLayerSize;
 static int inputLayersize;
 static int hiddenLayersize;
 static int outputLayerSize;
+
+
+
 
 
 
@@ -96,6 +103,8 @@ public:
 
 	//activations
 
+	double ActivationFunctionsChoice(int Choice, double weightedSum);
+
 	//tanh
 	double tanhActivationFunction(double weightedSum) { return tanh(weightedSum); }
 	double derivateOfTanhActivationFunction(double weightedSum){ return 1 - (tanh(weightedSum) * tanh(weightedSum));}
@@ -149,8 +158,9 @@ public:
 
 
 	//costs
-	void costFunction(int WhichCostFunction);
-	void derivativeOfCostFunction(int WhichCostFunction);
+	void costFunctionChoice(int costFunctionChoice);
+
+	void derivativeOfCostFunctionChoice(int WhichCostFunction);
 
 	void MSEcostFunction();
 	void derivativeOfMSEcostFunction();
@@ -160,6 +170,18 @@ public:
 
 	void ClipedBinaryCrossEntropyLoss();
 	void DerivativeOfClipedBinaryCrossEntropyLoss();
+	//new
+	void CategoricalCrossEntropyLoss();
+	void DerivativeOfCategoricalCrossEntropyLoss();
+
+	void HuberLoss(double delta);
+	void DerivativeOfHuberLoss(double delta);
+
+	void FocalLoss(double alpha, double gamma);
+	void DerivativeOfFocalLoss(double alpha, double gamma);
+
+	void DiceLoss();
+	void DerivativeOfDiceLoss();
 
 	void backPropagationCalculateGradient(int indexOfLayer, int indexOfneuron);
 	void backPropagationPropagate();
@@ -216,7 +238,15 @@ private:
 
 
 
-	//static networksizes
+	//static variables ADJUSTABLE!! here
+	// 
+		//for huber
+	double delta = 0.5;//tolerance adjust as needed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+	//for focal
+	double alpha = 0.5, gamma = 0.5; // adjust as needed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	//leaky
+	double alphaLeaky = 0.1;
 
 
 };
@@ -245,8 +275,9 @@ void Network::allocGradientAndChained()
 }
 Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int numberOfHiddenNeurons, int numberOfOutputNuerons)
 {
-
-	//initializations
+	/*
+	* initialization
+	*/
 
 	networkLayerSize = 1 + numberOfHiddenLayers + 1;
 	inputLayersize = numberOfInputLayersNeuron;
@@ -255,8 +286,10 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 
 	cost = 0.0;
 	etaLearningRate = 0.0;
-
+	
+	//allocation-for-Gradient-and-Chain-Vectors
 	allocGradientAndChained();
+
 	vector<vector<Neuron>> tempLayer(networkLayerSize);//supparated the inputlayer and the outputlayers
 
 	//inputLayer made
@@ -288,124 +321,116 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 }
 double Network::getWeightedSum(int layerIndex, int neuronIndex)
 {
-	double tempWeightedSum = 0.0;
+	/*
+	* takes LayerIndex = Layer weights to be extracted from
+	* takes neuronIndex = neuron weights to be extracted for
+	* for every neuron in layer sums the weights for neuron
+	* returns the weighted sum
+	*/
 
-	//i'll take each weight vector of each layer's indexed neuron and do the weightedsum and return it.
-	// cout << "called for layer: " << layerIndex << "- and for neuronIndex: " << neuronIndex<<endl;
+	double tempWeightedSum = 0.0;
 	for (auto& nueron : Layers[layerIndex])
 	{
-		double weight = nueron.getweightsAndConnections()[neuronIndex];
-		double x = nueron.getInput();
-		double b = nueron.getBais();
-
+		double weight = nueron.getweightsAndConnections()[neuronIndex];//weight
+		double x = nueron.getInput();//activated
+		double b = nueron.getBais();//bias
 		tempWeightedSum = tempWeightedSum + (weight * x + b);
-		//cout << "\nweight = " <<weight<<" x="<<x<<" b="<<b<<"--\n";
 	}
 
 	return tempWeightedSum;
 }
-
-
-//done
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void Network::feedForwardFlexableOutputs(int WhichActivationFunc)
+double Network::ActivationFunctionsChoice(int Choice, double weightedSum)
 {
-	double weightedSum;
+	
+	/*
+	* takes Choice function
+	* takes WeightedSum
+	* Activates weightedsum By Choice
+	* returns Activated
+	*/
+	double Activated = 0.0;
+	switch (Choice){
 
+	case TANH:
+		Activated = tanhActivationFunction(weightedSum);
+		break;
+
+	case SIGMOID:
+		Activated = sigmoidActivationFucntion(weightedSum);
+		break;
+
+	case RELU:
+		Activated = reluActivationFunction(weightedSum);
+		break;
+
+	case LRELU:
+		Activated = leaky_reluActivationFunction(weightedSum, alphaLeaky);
+		break;
+
+	case SWISH:
+		Activated = swishActivationFunction(weightedSum);
+		break;
+
+	case SOFTPLUS:
+		Activated = softplus(weightedSum);
+		break;
+
+	case SOFTSIGN:
+		Activated = softsign(weightedSum);
+		break;
+
+	case BENT_IDENTITY:
+		Activated = bent_identity(weightedSum);
+		break;
+
+	case HARDTANH:
+		Activated = hardtanh(weightedSum);
+		break;
+
+	case SELU:
+		Activated = selu(weightedSum);
+		break;
+
+	case ELU:
+		Activated = elu(weightedSum);
+		break;
+
+	case SOFTMAX:
+		Activated = softmax(weightedSum);
+		break;
+
+	default:
+		cerr << "***Activation Function Jumped!!***\n\a";
+		break;
+	}
+
+	return Activated;
+}
+void Network::feedForwardFlexableOutputs(int functionChoice)
+{
+	/*
+	* it takes FunctionChoice
+	* goes through lastLayers
+	* gets weightedsum
+	* sends it to be activateed
+	* as many times as there are outputs
+	*/
+	double weightedSum;
 	int singleLayer = Layers.size() - 2; //-2 because its coming from hiddenl layer
 	for (int singleNeuron = 0; singleNeuron < Layers[singleLayer + 1].size(); singleNeuron++)//for every output
 	{
-
 		weightedSum = getWeightedSum(singleLayer, singleNeuron); //sends the layer and the index number of the next nueron for the weight to be extracted for
 		Layers[singleLayer + 1][singleNeuron].setWeightedSum(weightedSum);
-		double Activated;
-
-
-
-		switch (WhichActivationFunc)
-		{
-		case TANH:
-			Activated = tanhActivationFunction(weightedSum);
-			break;
-
-		case SIGMOID:
-
-			Activated = sigmoidActivationFucntion(weightedSum);
-			break;
-
-		case RELU:
-
-			Activated = reluActivationFunction(weightedSum);
-			break;
-		case LRELU:
-			double alpha = 0.1;
-			Activated = leaky_reluActivationFunction(weightedSum, alpha);
-
-		case SWISH:
-			Activated = swishActivationFunction(weightedSum);
-			break;
-
-		case SOFTPLUS:
-			Activated =softplus(weightedSum);
-			break;
-
-		case SOFTSIGN:
-			Activated = softsign(weightedSum);
-			break;
-
-		case BENT_IDENTITY:
-			Activated = bent_identity(weightedSum);
-			break;
-		
-		case HARDTANH:
-			Activated = hardtanh(weightedSum);
-			break;
-
-		case SELU:
-			Activated = selu(weightedSum);
-			break;
-
-		case ELU:
-			Activated = elu(weightedSum);
-			break;
-		
-		case SOFTMAX:
-			Activated =  softmax(weightedSum);
-			break;
-
-		default:
-			cerr << "***Activation Function Jumped!!**\n\a";
-			break;
-		}
-		
+		double Activated = ActivationFunctionsChoice(functionChoice, weightedSum);		
 		Output.push_back(Activated);
 	}
 }
 void Network::feedForwardFlexableInputs()
 {
+	/*
+	* sets input for every neuron in input Layer
+	* sets weighted sum, which is just the input, or none
+	*/
 	int size = Layers.front().size();
 	auto& inputNeuron = Layers.front();
 
@@ -413,88 +438,45 @@ void Network::feedForwardFlexableInputs()
 	{
 		inputNeuron[firstLayerNeurons].set_xInput(Input[firstLayerNeurons]);
 		//calculate weighted sum, the weighted sum is the input its self.
-		inputNeuron[firstLayerNeurons].setWeightedSum(Input[firstLayerNeurons]);
+		inputNeuron[firstLayerNeurons].setWeightedSum(Input[firstLayerNeurons]);//could be left none
 	}
 
 }
 void Network::feedForward()
 {
-	//intput // refract here so that its flexable
+
+	/*
+	* Feed Forward
+	* calls set input.
+	*/
+	//intput refract here so that its flexable
 	feedForwardFlexableInputs();
 
 	double weightedSum;
-
-	for (int singleLayer = 0; singleLayer < Layers.size() - 1; singleLayer++)//changed to -2
-	{
-		
-		
-		
-		
-		if (singleLayer == Layers.size() - 2)
-		{
+	for (int singleLayer = 0; singleLayer < Layers.size() - 2; singleLayer++)//changed to -2
+	{			
 			for (int singleNeuron = 0; singleNeuron < Layers[singleLayer + 1].size(); singleNeuron++)
 			{
-				/*
-				* for every layer sent, a neuron of nextlayer is given the weighted sum of the current layers neurons, repectivly indexed
-				* what i want to make sure now is the last 2, output neurons have thereweighted sum activated valueas an out put
-				* so what we gonna do is calculate the weighted sum without feeding forward. so as to avoid forward indexing
-				* so now i understand that the output, the activated weightedsum is also needed here at the output neurons
-				*/
-				weightedSum = getWeightedSum(singleLayer, singleNeuron); //sends the layer and the index number of the next nueron for the weight to be extracted for
+				weightedSum = getWeightedSum(singleLayer, singleNeuron);
 				Layers[singleLayer + 1][singleNeuron].setWeightedSum(weightedSum);
-				double Activated;
-				Activated = sigmoidActivationFucntion(weightedSum);
-				Output.push_back(Activated);
-			}
-			break;
-		}
-		
-		else {
-			for (int singleNeuron = 0; singleNeuron < Layers[singleLayer + 1].size(); singleNeuron++)
-			{
-				/*
-				* for every layer sent, a neuron of nextlayer is given the weighted sum of the current layers neurons, repectivly indexed
-				* what i want to make sure now is the last 2, output neurons have thereweighted sum activated valueas an out put
-				* so what we gonna do is calculate the weighted sum without feeding forward. so as to avoid forward indexing
-				* so now i understand that the output, the activated weightedsum is also needed here at the output neurons
-				*/
 
-				weightedSum = getWeightedSum(singleLayer, singleNeuron); //sends the layer and the index number of the next nueron for the weight to be extracted for
-				Layers[singleLayer + 1][singleNeuron].setWeightedSum(weightedSum);
-				
+				double Activated = ActivationFunctionsChoice(TANH, weightedSum);
 
-
-
-
-				double Activated = tanhActivationFunction(weightedSum);
-				//double Activated = r
-				//cout <<"\n" << Layers[singleLayer + 1][singleNeuron].getInput() << "******************************** start" << endl;
 				Layers[singleLayer + 1][singleNeuron].set_xInput(Activated);
-				//cout<<"\n" << Layers[singleLayer + 1][singleNeuron].getInput() << "****************************** end" << endl;
-
-				//cout << "Weightedsum: =" << weightedSum << endl << "Activated: = " << Activated << endl << endl;
-				//cout << "\ninputs weightedsum: " << Layers[0][0].getWeightedSum() << "second: weightedsum" << Layers[0][1].getWeightedSum()<<endl;
 
 			}
-		}
+		
 	}
 
-
-	//experiment change for the last layer
-
-
-
-
-
-
-	//output
-	//feedForwardFlexableOutputs(TANH);/// remove
-	//feedForwardFlexableOutputs(SIGMOID);//change
+	//output with choiceActivationFunction
+	feedForwardFlexableOutputs(SIGMOID);//change
 
 }
-void Network::costFunction(int WhichCostFunction)
+void Network::costFunctionChoice(int costFunctionChoice)
 {
-	switch (WhichCostFunction)
+
+
+	switch (costFunctionChoice)
 	{
 	case MSE:
 		MSEcostFunction();
@@ -505,13 +487,27 @@ void Network::costFunction(int WhichCostFunction)
 	case CBCEL:
 		ClipedBinaryCrossEntropyLoss();
 		break;
-		
+	case CCE:
+		CategoricalCrossEntropyLoss();
+		break;
+	case HUBER:
+		HuberLoss(delta);
+		break;
+	case FOCAL:
+		FocalLoss(alpha, gamma);
+		break;
+	case DICE:
+		DiceLoss();
+		break;
+
 	default:
+		cerr << "\n***Cost Function Jumped!!****\n\a";
 		break;
 	}
 }
-void Network::derivativeOfCostFunction(int WhichCostFunction)
+void Network::derivativeOfCostFunctionChoice(int WhichCostFunction)
 {
+
 	switch (WhichCostFunction)
 	{
 	case MSE:
@@ -523,7 +519,21 @@ void Network::derivativeOfCostFunction(int WhichCostFunction)
 	case CBCEL:
 		DerivativeOfClipedBinaryCrossEntropyLoss();
 		break;
+	case CCE:
+		DerivativeOfCategoricalCrossEntropyLoss();
+		break;
+	case HUBER:
+		DerivativeOfHuberLoss(delta);
+		break;
+	case FOCAL:
+		DerivativeOfFocalLoss(alpha, gamma);
+		break;
+	case DICE:
+		DerivativeOfDiceLoss();
+		break;
+
 	default:
+		cerr << "\n***Cost Derivative Function Jumped!!****\n\a";
 		break;
 	}
 }
@@ -537,7 +547,7 @@ void Network::MSEcostFunction()
 		sameIndex++;
 	}
 	cost /= Output.size();
-	
+
 }
 void Network::derivativeOfMSEcostFunction()
 {
@@ -549,17 +559,19 @@ void Network::derivativeOfMSEcostFunction()
 		sameIndex++;
 	}
 }
+
+
 void Network::BinaryCrossEntropyLoss()
 {
 	int sameIndex = 0;
 	cost = 0;
 
-	
+
 	for (auto& singleOutputNeurons : Output)
 	{
-		
+
 		cost -= (desiredOutput[sameIndex] * log(singleOutputNeurons) + ((1 - desiredOutput[sameIndex]) * log(1 - singleOutputNeurons)));
-		
+
 		sameIndex++;
 	}
 	cost /= Output.size();
@@ -571,11 +583,11 @@ void Network::DerivativeOfBinaryCrossEntropyLoss()
 	deltaCosts.clear();
 	for (auto& singleOutputNeurons : Output)
 	{
-		//cout << "\n*******************desiredoutput = " << desiredOutput[sameIndex] << " and output<<" << singleOutputNeurons + 1e-10 << endl;
 		deltaCosts.push_back(-(desiredOutput[sameIndex] / singleOutputNeurons + 1e-10) - ((1 - desiredOutput[sameIndex]) / ((1 - singleOutputNeurons) + 1e-10)));
 		sameIndex++;
 	}
 }
+
 void Network::ClipedBinaryCrossEntropyLoss()
 {
 	int sameIndex = 0;
@@ -603,6 +615,144 @@ void Network::DerivativeOfClipedBinaryCrossEntropyLoss()
 		sameIndex++;
 	}
 }
+
+void Network::CategoricalCrossEntropyLoss() {
+	int sameIndex = 0;
+	cost = 0;
+
+
+	for (auto& singleOutputNeurons : Output)
+	{
+		cost -= desiredOutput[sameIndex] * log(singleOutputNeurons + 1e-10);
+		sameIndex++;
+	}
+	cost /= Output.size();
+}
+void Network::DerivativeOfCategoricalCrossEntropyLoss() {
+	int sameIndex = 0;
+	deltaCosts.clear();
+	for (auto& singleOutputNeurons : Output)
+	{
+		deltaCosts.push_back(-desiredOutput[sameIndex] / (singleOutputNeurons + 1e-10));
+		sameIndex++;
+	}
+}
+
+void Network::HuberLoss(double delta) {
+
+	int sameIndex = 0;
+
+	cost = 0;
+	for (auto& singleOutputNeurons : Output) {
+		double error = singleOutputNeurons - desiredOutput[sameIndex];
+		if (abs(error) <= delta) {
+			cost += 0.5 * error * error;
+		}
+		else {
+			cost += delta * (abs(error) - 0.5 * delta);
+		}
+		sameIndex++;
+	}
+	cost /= Output.size();
+}
+void Network::DerivativeOfHuberLoss(double delta) {
+	int sameIndex = 0;
+	deltaCosts.clear();
+	for (auto& singleOutputNeurons : Output) {
+		double error = singleOutputNeurons - desiredOutput[sameIndex];
+		if (abs(error) <= delta) {
+			deltaCosts.push_back(error);
+		}
+		else {
+			deltaCosts.push_back(delta * sign(error));
+		}
+		sameIndex++;
+	}
+}
+
+void Network::FocalLoss(double alpha, double gamma) {
+	int sameIndex = 0;
+	cost = 0;
+
+	for (auto& singleOutputNeurons : Output) {
+		double pt = singleOutputNeurons;
+		cost -= alpha * pow(1 - pt, gamma) * desiredOutput[sameIndex] * log(pt + 1e-10) +
+			(1 - alpha) * pow(pt, gamma) * (1 - desiredOutput[sameIndex]) * log(1 - pt + 1e-10);
+		sameIndex++;
+	}
+	cost /= Output.size();
+}
+void Network::DerivativeOfFocalLoss(double alpha, double gamma) {
+	int sameIndex = 0;
+	deltaCosts.clear();
+	for (auto& singleOutputNeurons : Output) {
+		double pt = singleOutputNeurons;
+		deltaCosts.push_back(alpha * pow(1 - pt, gamma) * desiredOutput[sameIndex] / (pt + 1e-10) -
+			(1 - alpha) * pow(pt, gamma) * (1 - desiredOutput[sameIndex]) / (1 - pt + 1e-10));
+		sameIndex++;
+	}
+}
+
+void Network::DiceLoss() {
+	int sameIndex = 0;
+	double intersection = 0;
+	double sum = 0;
+
+	for (auto& singleOutputNeurons : Output) {
+		intersection += singleOutputNeurons * desiredOutput[sameIndex];
+		sum += pow(singleOutputNeurons, 2) + pow(desiredOutput[sameIndex], 2);
+		sameIndex++;
+	}
+	cost = 1 - (2 * intersection) / (sum + 1e-10);
+}
+void Network::DerivativeOfDiceLoss() {
+	int sameIndex = 0;
+	deltaCosts.clear();
+	double intersection = 0;
+	double sum = 0;
+
+	for (auto& singleOutputNeurons : Output) {
+		intersection += singleOutputNeurons * desiredOutput[sameIndex];
+		sum += pow(singleOutputNeurons, 2) + pow(desiredOutput[sameIndex], 2);
+		sameIndex++;
+	}
+
+	for (auto& singleOutputNeurons : Output) {
+		deltaCosts.push_back((2 * desiredOutput[sameIndex] * (sum - 2 * intersection)) / (sum * sum + 1e-10));
+	}
+}
+
+
+
+//done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void Network::backPropagationCalculateGradient(int indexOfLayer, int indexOfOutputNeurons)
 {
 
@@ -778,6 +928,17 @@ pair<vector<vector<double>>, vector<double>> trainingGen(int size = 1000)
 
 	return pairedData;
 }
+double static sign(double x) {
+	if (x > 0) {
+		return 1.0;
+	}
+	else if (x < 0) {
+		return -1.0;
+	}
+	else {
+		return 0.0;
+	}
+}
 int main()
 {
 	auto start = chrono::high_resolution_clock::now();//-------------------------------------------------------------------time cost calculation
@@ -790,7 +951,7 @@ int main()
 
 
 	//network creation
-	Network tempNet = Network(2, 6, 7, 1);
+	Network tempNet = Network(2, 6, 7, 1); //************************************************add a way to choose hidden layer activation and output layer activation, cost too!!!!!!!
 
 
 
