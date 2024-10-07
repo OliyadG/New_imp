@@ -48,7 +48,7 @@ public:
 	// temp gets
 	vector<double>& getweightsAndConnections() { return w; }
 	double getInput() { return x_ActivatedInput; }
-	double getBais() { return b_Bais; }
+	double& getBais() { return b_Bais; }
 	double getWeightedSum() { return weightedSum; }
 	vector<double>& getVelocities()
 	{
@@ -70,7 +70,7 @@ private:
 	double weightedSum;//same as y! or output
 	vector<double> velocities;
 
-	
+
 
 };
 void Neuron::makeConnections(int numberOfNextLayerNeurons)
@@ -85,9 +85,11 @@ void Neuron::makeConnections(int numberOfNextLayerNeurons)
 	{
 		tempCon = dist(random_engine);
 	}
-	
 
-	b_Bais = dist(random_engine);
+
+	b_Bais = dist(random_engine)*0.5;
+
+	//b_Bais < 0 ? b_Bais = 0 : b_Bais = 1;
 	//b_Bais = 0; //change
 }
 class Network {
@@ -108,51 +110,51 @@ public:
 
 	//tanh
 	double tanhActivationFunction(double weightedSum) { return tanh(weightedSum); }
-	double derivateOfTanhActivationFunction(double weightedSum){ return 1 - (tanh(weightedSum) * tanh(weightedSum));}
-	
+	double derivateOfTanhActivationFunction(double weightedSum) { return 1 - (tanh(weightedSum) * tanh(weightedSum)); }
+
 	//sigmoid
-	double sigmoidActivationFucntion(double weightedSum) {return 1.0 / (1.0 + exp(-weightedSum));}
-	double derivativeOfSigmoidFucntion( double weightedSum) {	double sigmoid = sigmoidActivationFucntion(weightedSum);	return sigmoid * (1.0 - sigmoid);}
+	double sigmoidActivationFucntion(double weightedSum) { return 1.0 / (1.0 + exp(-weightedSum)); }
+	double derivativeOfSigmoidFucntion(double weightedSum) { double sigmoid = sigmoidActivationFucntion(weightedSum);	return sigmoid * (1.0 - sigmoid); }
 
 	//relu
 	double reluActivationFunction(double x) { return (x > 0) ? x : 0; }
-	double reluActivationFunction_derivative(double x) { return (x > 0) ? 1 : 0;  }
+	double reluActivationFunction_derivative(double x) { return (x > 0) ? 1 : 0; }
 
 	// Leaky ReLU
-	double leaky_reluActivationFunction(double x, double alpha) {	return (x > 0) ? x : alpha * x;}
-	double leaky_reluActivationFunction_derivative(double x, double alpha) {	return (x > 0) ? 1 : alpha;}
+	double leaky_reluActivationFunction(double x, double alpha) { return (x > 0) ? x : alpha * x; }
+	double leaky_reluActivationFunction_derivative(double x, double alpha) { return (x > 0) ? 1 : alpha; }
 
 	// Swish
-	double swishActivationFunction(double x) { return x / (1 + exp(-x));}
-	double swishActivationFunction_derivative(double x) {double exp_x = exp(-x); double denominator = (1 + exp_x) * (1 + exp_x); return (exp_x * (x + 1) - 1) / denominator;}
+	double swishActivationFunction(double x) { return x / (1 + exp(-x)); }
+	double swishActivationFunction_derivative(double x) { double exp_x = exp(-x); double denominator = (1 + exp_x) * (1 + exp_x); return (exp_x * (x + 1) - 1) / denominator; }
 
 	// Softmax
-	double softmax(double x) {	double exp_x = exp(x); return exp_x / (1 + exp_x); }
-	double softmax_derivative(double x) {		double exp_x = exp(x);	double denominator = (1 + exp_x) * (1 + exp_x);		return exp_x / denominator;	}
+	double softmax(double x) { double exp_x = exp(x); return exp_x / (1 + exp_x); }
+	double softmax_derivative(double x) { double exp_x = exp(x);	double denominator = (1 + exp_x) * (1 + exp_x);		return exp_x / denominator; }
 
 	// Softplus
-	double softplus(double x) {		return log(1 + exp(x));	}
-	double softplus_derivative(double x) {		return 1 / (1 + exp(-x));	}
+	double softplus(double x) { return log(1 + exp(x)); }
+	double softplus_derivative(double x) { return 1 / (1 + exp(-x)); }
 
 	// Softsign
-	double softsign(double x) {	return x / (1 + abs(x));}
-	double softsign_derivative(double x) {		double denominator = (1 + abs(x)) * (1 + abs(x));		return 1 / denominator;	}
+	double softsign(double x) { return x / (1 + abs(x)); }
+	double softsign_derivative(double x) { double denominator = (1 + abs(x)) * (1 + abs(x));		return 1 / denominator; }
 
 	// Bent Identity
-	double bent_identity(double x) {		return (sqrt(x * x + 1) - 1) / 2 + x;	}
-	double bent_identity_derivative(double x) {	return x / sqrt(x * x + 1) + 1;}
+	double bent_identity(double x) { return (sqrt(x * x + 1) - 1) / 2 + x; }
+	double bent_identity_derivative(double x) { return x / sqrt(x * x + 1) + 1; }
 
 	// Hardtanh
-	double hardtanh(double x) {		if (x < -1) return -1;		if (x > 1) return 1;		return x;	}
-	double hardtanh_derivative(double x) {		if (x < -1 || x > 1) return 0;		return 1;	}
+	double hardtanh(double x) { if (x < -1) return -1;		if (x > 1) return 1;		return x; }
+	double hardtanh_derivative(double x) { if (x < -1 || x > 1) return 0;		return 1; }
 
 	// SELU
-	double selu(double x) {		if (x < 0) return 1.0507 * exp(x) - 1.0507;	return 1.0507 * x;}
-	double selu_derivative(double x) {		if (x < 0) return 1.0507 * exp(x);		return 1.0507;	}
+	double selu(double x) { if (x < 0) return 1.0507 * exp(x) - 1.0507;	return 1.0507 * x; }
+	double selu_derivative(double x) { if (x < 0) return 1.0507 * exp(x);		return 1.0507; }
 
 	// ELU
-	double elu(double x) {		if (x < 0) return exp(x) - 1;		return x;	}
-	double elu_derivative(double x) {		if (x < 0) return exp(x);		return 1;	}
+	double elu(double x) { if (x < 0) return exp(x) - 1;		return x; }
+	double elu_derivative(double x) { if (x < 0) return exp(x);		return 1; }
 
 
 
@@ -186,7 +188,7 @@ public:
 
 	void backPropagationCalculateGradient();
 	void backPropagationPropagate();
-	
+
 
 
 	//temp gets
@@ -195,7 +197,7 @@ public:
 	vector<double> getInput() { return Input; }
 	double getCost() { return cost; }
 	vector<double> getDeltacosts() { return deltaCosts; }
-	vector<vector<vector<double>>>& getCalculatedGradient() { return calculatedGradient; }
+	vector<vector<vector<double>>>& getCalculatedGradient() { return calculatedGradientWeight; }
 
 	// temp sets
 	void setInput(vector<double> input) { Input = input; }
@@ -206,8 +208,8 @@ public:
 	void resetDesired() { desiredOutput.clear(); }
 	void setDesiredOutput(vector<double> desire) { desiredOutput = desire; }
 	void resetCostsDeltas() { deltaCosts.clear(); cost = 0.0; }
-	
-	void resetGradient() { calculatedGradient.clear(); }
+
+	void resetGradient() { calculatedGradientWeight.clear(); }
 	void resetChained() { chainedStored.clear(); }
 
 
@@ -237,7 +239,8 @@ private:
 
 
 
-	vector<vector<vector<double>>> calculatedGradient;
+	vector<vector<vector<double>>> calculatedGradientWeight;
+	vector<vector<double>> calculatedGradientBias;
 	vector < vector <double>> chainedStored;
 	vector<vector<Neuron>> Layers;
 	vector<double> Input;
@@ -265,25 +268,30 @@ private:
 };
 void Network::allocGradientAndChained()
 {
-	
-	calculatedGradient = vector<vector<vector<double>>>(networkLayerSize-1);//gradient allocation
-	chainedStored = vector<vector<double>> (networkLayerSize); // chainedstore allocatio
+
+	calculatedGradientWeight = vector<vector<vector<double>>>(networkLayerSize - 1);//gradient allocation
+	calculatedGradientBias = vector<vector<double>>(networkLayerSize);//
+	chainedStored = vector<vector<double>>(networkLayerSize); // chainedstore allocatio
+
 	// Allocate first layer
-	calculatedGradient[0].resize(inputLayersize, vector<double>(hiddenLayersize));
+	calculatedGradientWeight[0].resize(inputLayersize, vector<double>(hiddenLayersize));
 	chainedStored[0].resize(inputLayersize);
+	calculatedGradientBias[0].resize(inputLayersize);
 	// Allocate hidden layers
 	for (int i = 1; i < networkLayerSize - 1; i++) {
 		if (i == networkLayerSize - 2) {
-			calculatedGradient[i].resize(hiddenLayersize, vector<double>(outputLayerSize));
+			calculatedGradientWeight[i].resize(hiddenLayersize, vector<double>(outputLayerSize));
 			chainedStored[i].resize(hiddenLayersize);
+			calculatedGradientBias[i].resize(hiddenLayersize);
 		}
 		else {
-			calculatedGradient[i].resize(hiddenLayersize, vector<double>(hiddenLayersize));
+			calculatedGradientWeight[i].resize(hiddenLayersize, vector<double>(hiddenLayersize));
+			calculatedGradientBias[i].resize(hiddenLayersize);
 			chainedStored[i].resize(hiddenLayersize);
 		}
 	}
 	// Allocate last layer
-	//calculatedGradient[networkLayerSize - 1].resize(outputLayerSize, vector<double>(1)); changed
+	//calculatedGradientWeight[networkLayerSize - 1].resize(outputLayerSize, vector<double>(1)); changed
 	chainedStored[networkLayerSize - 1].resize(outputLayerSize);
 }
 Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int numberOfHiddenNeurons, int numberOfOutputNuerons)
@@ -299,7 +307,7 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 
 	cost = 0.0;
 	etaLearningRate = 0.0;
-	
+
 	//allocation-for-Gradient-and-Chain-Vectors
 	allocGradientAndChained();
 
@@ -354,7 +362,7 @@ double Network::getWeightedSum(int layerIndex, int neuronIndex)
 }
 double Network::ActivationFunctionsChoice(int Choice, double weightedSum)
 {
-	
+
 	/*
 	* takes Choice function
 	* takes WeightedSum
@@ -362,7 +370,7 @@ double Network::ActivationFunctionsChoice(int Choice, double weightedSum)
 	* returns Activated
 	*/
 	double Activated = 0.0;
-	switch (Choice){
+	switch (Choice) {
 
 	case TANH:
 		Activated = tanhActivationFunction(weightedSum);
@@ -502,7 +510,7 @@ void Network::feedForwardFlexableOutputs(int functionChoice)
 	{
 		weightedSum = getWeightedSum(singleLayer, singleNeuron); //sends the layer and the index number of the next nueron for the weight to be extracted for
 		Layers[singleLayer + 1][singleNeuron].setWeightedSum(weightedSum);
-		double Activated = ActivationFunctionsChoice(functionChoice, weightedSum);		
+		double Activated = ActivationFunctionsChoice(functionChoice, weightedSum);
 		Output.push_back(Activated);
 	}
 }
@@ -535,22 +543,22 @@ void Network::feedForward()
 
 	double weightedSum;
 	for (int singleLayer = 0; singleLayer < Layers.size() - 2; singleLayer++)//changed to -2
-	{			
-			for (int singleNeuron = 0; singleNeuron < Layers[singleLayer + 1].size(); singleNeuron++)
-			{
-				weightedSum = getWeightedSum(singleLayer, singleNeuron);
-				Layers[singleLayer + 1][singleNeuron].setWeightedSum(weightedSum);
+	{
+		for (int singleNeuron = 0; singleNeuron < Layers[singleLayer + 1].size(); singleNeuron++)
+		{
+			weightedSum = getWeightedSum(singleLayer, singleNeuron);
+			Layers[singleLayer + 1][singleNeuron].setWeightedSum(weightedSum);
 
-				double Activated = ActivationFunctionsChoice(TANH, weightedSum);
+			double Activated = ActivationFunctionsChoice(TANH, weightedSum);
 
-				Layers[singleLayer + 1][singleNeuron].set_xInput(Activated);
+			Layers[singleLayer + 1][singleNeuron].set_xInput(Activated);
 
-			}
-		
+		}
+
 	}
 
 	//output with choiceActivationFunction
-	feedForwardFlexableOutputs(SIGMOID);//change
+	feedForwardFlexableOutputs(TANH);//change
 
 }
 void Network::costFunctionChoice(int costFunctionChoice)
@@ -809,7 +817,7 @@ void Network::backPropagationCalculateGradient()
 	* at the end it stores the chained for that back neuron index
 	*/
 
-	int indexOfLayer = Layers.size()-1;
+	int indexOfLayer = Layers.size() - 1;
 	int indexOfFrontNeuron;
 	int indexOfBackNeuron;
 
@@ -819,19 +827,17 @@ void Network::backPropagationCalculateGradient()
 	for (auto deltacost : deltaCosts)
 	{
 		double x = Layers[indexOfLayer][indexOfLastNeuron].getWeightedSum();
-		chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivativeOfActivationFunction(SIGMOID, x));//output activation sigmoid
+		chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivativeOfActivationFunction(TANH, x));//output activation sigmoid
 		indexOfLastNeuron++;
 		//double w = Layers[indexOfLayer][indexOfLastNeuron].getweightsAndConnections()[0];
 		//double b = Layers[indexOfLayer][indexOfLastNeuron].getBais();
 		//double weightedSumOfTheOutput = w * x + b;
 		//chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivativeOfSigmoidFucntion(w * x + b));     //temporary chain
 		//these 3 were for the last incorrect layer changed.
-		//calculatedGradient[indexOfLayer][indexOfLastNeuron][0] = chainedStored[indexOfLayer][indexOfLastNeuron] * x;
+		//calculatedGradientWeight[indexOfLayer][indexOfLastNeuron][0] = chainedStored[indexOfLayer][indexOfLastNeuron] * x;
 		//chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivativeOfSigmoidFucntion(w * x + b) * w * derivateOfTanhActivationFunction(x)); // chained stored
 		//chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivateOfTanhActivationFunction(w * x + b) * w * derivateOfTanhActivationFunction(x)); // remove
 	}
-
-
 
 	for (int currentLayerIndex = indexOfLayer; currentLayerIndex > 0; currentLayerIndex--)
 	{
@@ -850,7 +856,10 @@ void Network::backPropagationCalculateGradient()
 			for (int frontSize = Layers[currentLayerIndex].size(); indexOfFrontNeuron < frontSize; indexOfFrontNeuron++)
 			{
 				Neuron& FrontLayerNeuron = Layers[currentLayerIndex][indexOfFrontNeuron];
-				calculatedGradient[currentLayerIndex - 1][indexOfBackNeuron][indexOfFrontNeuron] = chainedStored[currentLayerIndex][indexOfFrontNeuron]/*derivative of thanh(x)*/ * backWeightedSum/* x of current*/; //optimize backweight is there
+				calculatedGradientWeight[currentLayerIndex - 1][indexOfBackNeuron][indexOfFrontNeuron] = chainedStored[currentLayerIndex][indexOfFrontNeuron]/*derivative of thanh(x)*/ * backWeightedSum/* x of current*/; //optimize backweight is there
+
+				calculatedGradientBias[currentLayerIndex - 1][indexOfBackNeuron] = chainedStored[currentLayerIndex][indexOfFrontNeuron];//bias gradient
+
 				tempChained += (chainedStored[currentLayerIndex][indexOfFrontNeuron] * backWieght[indexOfFrontNeuron] * derivativeOfActivationFunction(TANH, backWeightedSum));
 			}
 			chainedStored[currentLayerIndex - 1][indexOfBackNeuron] = tempChained;
@@ -893,135 +902,138 @@ void Network::backPropagationPropagate()
 	/*
 	* the gradient is subtracted from the old weight
 	*/
-
-
-	int netsize = calculatedGradient.size();
+	int netsize = calculatedGradientWeight.size();
 	//iterate layers
 	for (int numberofLayer = 0; numberofLayer < netsize; numberofLayer++)
 	{
 		//cout << "Layer::::::" << numberofLayer << endl;
-		int neuroSize = calculatedGradient[numberofLayer].size();
+		int neuroSize = calculatedGradientWeight[numberofLayer].size();
 		//iterate neurons
 		for (int numberOfneuron = 0; numberOfneuron < neuroSize; numberOfneuron++)
 		{
 			//cout << "Neuron:::::::" << numberOfneuron << endl;
-			int weightsize = calculatedGradient[numberofLayer][numberOfneuron].size();
+			int weightsize = calculatedGradientWeight[numberofLayer][numberOfneuron].size();
 			auto& Layerweights = Layers[numberofLayer][numberOfneuron].getweightsAndConnections();
+
+			auto& bias = Layers[numberofLayer][numberOfneuron].getBais();
+			bias -= calculatedGradientBias[numberofLayer][numberOfneuron]/100;//here
+
 			//iterate weights
 			//cout << "***start weight***\n";
 			for (int numberOfWeight = 0; numberOfWeight < weightsize; numberOfWeight++)
 			{
-				//cout << " \n = old*****************: " << Layerweights[numberOfWeight] << endl;
-				//cout << "[" << numberofLayer << "][" << numberOfneuron << "][" << numberOfWeight << "]" << endl;// << Layerweights[numberOfWeight] << " + " << calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight];
-				//cout << "******** the gradient: " << calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight] << endl;
-				
-				//(calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight] < 0 && Layers[numberofLayer][numberOfneuron].getweightsAndConnections()[numberOfWeight] < 0)?  Layers[numberofLayer][numberOfneuron].getweightsAndConnections()[numberOfWeight] += -1*calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight] : Layers[numberofLayer][numberOfneuron].getweightsAndConnections()[numberOfWeight] += calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight];//change
-				//cout << " \n = updated*****************: " << Layerweights[numberOfWeight]<<endl;
-				if (desiredOutput[0] == 1)
+				if (desiredOutput[0] != 11)
 				{
-					Layerweights[numberOfWeight] -= calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight]/100;
+					Layerweights[numberOfWeight] -= calculatedGradientWeight[numberofLayer][numberOfneuron][numberOfWeight] / 100;
 				}
 				else {
-					Layerweights[numberOfWeight] += calculatedGradient[numberofLayer][numberOfneuron][numberOfWeight]/100;//change +
+					Layerweights[numberOfWeight] += calculatedGradientWeight[numberofLayer][numberOfneuron][numberOfWeight] / 100;//change +
 				}
-				
-
 			}
 			//cout << "***endl weight***\n";
 		}
 	}
 }
 
-pair<vector<vector<double>>, vector<double>> trainingGen(int size = 1000)
+pair<vector<vector<double>>, vector<double>> trainingGenLogicalOperations(int size = 1000)
 {
 	pair<vector<vector<double>>, vector<double>> pairedData;
+	vector<vector<double>> stempDataDesire;
 	vector<vector<double>> tempDataInput;
 	vector<double> tempDataDesire;
-
-	random_device rd;
-	mt19937 gen(rd());
-	uniform_int_distribution<> distrib(0, 1); // Use binary distribution for XOR-like data
-
 	for (int a = 0; a < size; ++a) {
-		// Generate random inputs
-		int x1 = distrib(gen);
-		int x2 = distrib(gen);
-		// XOR logic for generating output
-		double desired_output = (x1 != x2) ? 1 : 0;
-
+		
 		tempDataInput.push_back({ static_cast<double>(0), static_cast<double>(0) });
 		tempDataDesire.push_back(0);
 		tempDataInput.push_back({ static_cast<double>(0), static_cast<double>(1) });
 		tempDataDesire.push_back(1);
 		tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(1) });
 		tempDataDesire.push_back(0);
-		tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(1) });
-		tempDataDesire.push_back(0);
-		tempDataInput.push_back({ static_cast<double>(0), static_cast<double>(0) });
-		tempDataDesire.push_back(0);
 		tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(0) });
 		tempDataDesire.push_back(1);
-
-
 	}
-
-
 	pairedData.first = tempDataInput;
 	pairedData.second = tempDataDesire;
-
 	return pairedData;
-
-
-	//remove
-	if (size == 100 || size == 1000 || size == 10)
-	{
-		for (int a = 0; a < size / 2; ++a) {
-			// Generate random inputs
-			int x1 = distrib(gen);
-			int x2 = distrib(gen);
-			// XOR logic for generating output
-			double desired_output = (x1 != x2) ? 1 : 0;
-
-			// Push the generated pair into vectors
-			//		tempDataInput.push_back({ static_cast<double>(x1), static_cast<double>(x2) });
-			//      tempDataDesire.push_back(desired_output);
-
-			tempDataInput.push_back({ static_cast<double>(0.001), static_cast<double>(0.001) });//remove
-			tempDataDesire.push_back(0.001);
-			tempDataInput.push_back({ static_cast<double>(0.999), static_cast<double>(0.999) });//remove
-			tempDataDesire.push_back(0.001);
-
-			//tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(1) });//remove
-			//tempDataDesire.push_back(-1);
-
-
-		}
-	}
-	else {
-
-		for (int a = 0; a < size / 2; ++a) {
-			// Generate random inputs
-			int x1 = distrib(gen);
-			int x2 = distrib(gen);
-			// XOR logic for generating output
-			double desired_output = (x1 != x2) ? 1 : 0;
-
-			// Push the generated pair into vectors
-			//		tempDataInput.push_back({ static_cast<double>(x1), static_cast<double>(x2) });
-			//      tempDataDesire.push_back(desired_output);
-
-			tempDataInput.push_back({ static_cast<double>(0.001), static_cast<double>(0.999) });//remove
-			tempDataDesire.push_back(0.999);
-
-			tempDataInput.push_back({ static_cast<double>(0.999), static_cast<double>(0.001) });//remove
-			tempDataDesire.push_back(0.999);
-
-
-
-		}
-	}
-
 }
+
+pair<vector<vector<double>>, vector<vector<double>>> trainingGenLogicalMathFunction(int size = 1000)
+{
+	pair<vector<vector<double>>, vector<vector<double>>> pairedData;
+	vector<vector<double>> tempDataDesire;
+	vector<vector<double>> tempDataInput;
+	for (int a = 0; a < size; ++a) {
+
+		tempDataInput.push_back({ static_cast<double>(a) });
+		tempDataDesire.push_back({ static_cast<double>(a*a) });
+	}
+	pairedData.first = tempDataInput;
+	pairedData.second = tempDataDesire;
+	return pairedData;
+}
+
+
+
+/*
+* impliment first a way to chooce what for hidden and output activation, cost function to use without needing to tweak TANH, SIGMOID...or only in main.
+* then approximate x^2
+* use mse
+* use full tanh**********DONE WORKS
+* another thing: either copy from notepad or make the input and output flexable for multiple inputs
+* 
+*/
+
+
+
+
+
+
+
+
+
+
+/*
+* 
+* 
+* **********************where am i******
+* 
+* 
+* i have chaanges active function to whole TANH,
+* im also using MSE as a cost function
+* and i'm also adjusting the gradient of the bias
+* and its working very well
+* and i have also no need of using the condition to use - + for gradient
+* 
+* 
+* this network is working smothly and brilliantly
+
+
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+/*
+* why can't it go up more than 1?
+
+*/
+
+
+
+
+
+
+
+
 
 int main()
 {
@@ -1035,25 +1047,10 @@ int main()
 
 
 	//network creation
+	Network tempNet = Network(1, 5, 5, 1); //************************************************add a way to choose hidden layer activation and output layer activation, cost too!!!!!!!
 
 
 
-
-	Network tempNet = Network(2, 3, 4, 1); //************************************************add a way to choose hidden layer activation and output layer activation, cost too!!!!!!!
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
 	auto& Layers = tempNet.getLayers();
 
 	cout << "*******************************WEIGHTS****************************\n";
@@ -1079,16 +1076,13 @@ int main()
 	}
 
 
-
-
-
-	//gettraining data;
-
+	//get training data;
 	int epoch = 50000;
-	auto pairedInputAndDesire = trainingGen(epoch);
+	int dataSet = 1000;
 
 
 
+	auto pairedInputAndDesire = trainingGenLogicalMathFunction(epoch);
 
 	cout << "\n*********TESS***********\n";
 	int ask = 0;
@@ -1099,65 +1093,52 @@ int main()
 		cout << "\nstart: ";
 		cin >> input;
 		tempinputVec.push_back(input);
-		cin >> input;
-		tempinputVec.push_back(input);
+		//cin >> input;
+		//tempinputVec.push_back(input);
 
 		tempNet.setInput(tempinputVec);
-
 		tempNet.feedForward();
-
 		cout << tempNet.getOutput()[0];
+
 
 		tempNet.resetOutput();
 		tempNet.resetDesired();
 		tempNet.resetInput();
-
 		cout << "\ncontinue?: ";
 		cin >> ask;
 	}
 
 
-
-
-
-
 	//test for right changes
 	vector<vector<double>> input = pairedInputAndDesire.first;
-	vector<double> desire = pairedInputAndDesire.second;
+	vector<vector<double>> desire = pairedInputAndDesire.second;
 
 	double tempinput = 0.0;
 	int count = 0;
-	while (count < epoch)
-	{
+	int countEpoch = epoch/dataSet;
 
+	while (count<dataSet)
+	{
 		//separate learning
 		tempNet.setInput(input[count]);
 		tempNet.setDesiredOutput(vector<double>{desire[count]});
-
 		//step #2 feedforward.
 		tempNet.feedForward();
-
 		//step #3 calculate cost  
-		tempNet.costFunctionChoice(BCEL);
-
+		tempNet.costFunctionChoice(MSE);
 		//step #4 calculate cost/output
-		tempNet.derivativeOfCostFunctionChoice(BCEL);
-
+		tempNet.derivativeOfCostFunctionChoice(MSE);
 		//steo #5 do a gradientcalculation
 		tempNet.backPropagationCalculateGradient();
-
 		//step #6 do a back prop
 		tempNet.backPropagationPropagate();
-
-
-
 		cout << "input 1st : " << input[count].front();
 		//cin >> tempinput;
 		cout << endl;
-		cout << "input 2nd : " << input[count].back();
+		///////////////cout << "input 2nd : " << input[count].back();
 		//cin >> tempinput;
 		cout << endl;
-		cout << "desire : " << desire[count];
+		cout << "desire : " << desire[count][0];
 		//cin >> tempinput;
 		cout << endl;
 		cout << "output: " << tempNet.getOutput()[0] << " & cost: " << tempNet.getCost() << endl;
@@ -1179,6 +1160,35 @@ int main()
 		tempNet.allocGradientAndChained();
 		count++;
 
+		if (count == dataSet && countEpoch >= 0) { count = 0; countEpoch--; 
+		
+		cout << "\nESETED *********TESS***********epoch: "<<countEpoch<<"/50;;;;;;;;;;;;;\n";
+		int ask = 0;
+		while (ask != 99)
+		{
+			int input;
+			vector<double> tempinputVec;
+			cout << "\nstart: ";
+			cin >> input;
+			tempinputVec.push_back(input);
+			//cin >> input;
+			//tempinputVec.push_back(input);
+
+			tempNet.setInput(tempinputVec);
+			tempNet.feedForward();
+			cout << tempNet.getOutput()[0];
+
+
+			tempNet.resetOutput();
+			tempNet.resetDesired();
+			tempNet.resetInput();
+			cout << "\ncontinue?: ";
+			cin >> ask;
+		}
+		
+		}
+
+
 	}
 
 	cout << "\n*********TESS***********\n";
@@ -1192,13 +1202,9 @@ int main()
 		tempinputVec.push_back(input);
 		cin >> input;
 		tempinputVec.push_back(input);
-
 		tempNet.setInput(tempinputVec);
-
 		tempNet.feedForward();
-
 		cout << tempNet.getOutput()[0];
-
 		tempNet.resetOutput();
 		tempNet.resetDesired();
 		tempNet.resetInput();
@@ -1207,7 +1213,7 @@ int main()
 		cin >> ask;
 	}
 
-	
+
 
 	cout << "*******************************WEIGHTS****************************\n";
 	//get weights
@@ -1231,22 +1237,6 @@ int main()
 		i++;
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-
 }
-/*
-* 
-* two things either make changes to the end neuron because its acting like a layer 
-*
-*/
+
 
