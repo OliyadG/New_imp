@@ -95,7 +95,7 @@ void Neuron::makeConnections(int numberOfNextLayerNeurons)
 class Network {
 
 public:
-	Network(int numberOfInputLayerNeuron, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNeurons);
+	Network(int numberOfInputLayerNeuron, int numberOfHiddenLayers, int numberOfNeurons, int numberOfOutputNeurons, int hiddenLayerActivation, int outputLayerActivation, int costFunction);
 	void feedForward();
 	double getWeightedSum(int layerIndex, int NueronIndex);
 	void feedForwardFlexableOutputs(int WhichActivationFunc = SIGMOID);
@@ -212,7 +212,15 @@ public:
 	void resetGradient() { calculatedGradientWeight.clear(); }
 	void resetChained() { chainedStored.clear(); }
 
+	void setHiddenLayerActivation(int function)
+	{
+		hiddenLayerActivation = function;
+	}
 
+	void setOutputLayerActivation(int function)
+	{
+		outputLayerActivation = function;
+	}
 
 
 
@@ -251,6 +259,9 @@ private:
 
 	double cost;
 	vector<double> deltaCosts;
+
+	int hiddenLayerActivation;
+	int outputLayerActivation;
 
 
 
@@ -294,7 +305,7 @@ void Network::allocGradientAndChained()
 	//calculatedGradientWeight[networkLayerSize - 1].resize(outputLayerSize, vector<double>(1)); changed
 	chainedStored[networkLayerSize - 1].resize(outputLayerSize);
 }
-Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int numberOfHiddenNeurons, int numberOfOutputNuerons)
+Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int numberOfHiddenNeurons, int numberOfOutputNuerons, int hiddenLayerActivation, int outputLayerActivation, int costFunction)
 {
 	/*
 	* initialization
@@ -975,24 +986,6 @@ pair<vector<vector<double>>, vector<vector<double>>> trainingGenLogicalMathFunct
 
 
 /*
-* impliment first a way to chooce what for hidden and output activation, cost function to use without needing to tweak TANH, SIGMOID...or only in main.
-* then approximate x^2
-* use mse
-* use full tanh**********DONE WORKS
-* another thing: either copy from notepad or make the input and output flexable for multiple inputs
-* 
-*/
-
-
-
-
-
-
-
-
-
-
-/*
 * 
 * 
 * **********************where am i******
@@ -1026,7 +1019,10 @@ pair<vector<vector<double>>, vector<vector<double>>> trainingGenLogicalMathFunct
 * why can't it go up more than 1?
 
 */
+void train(int Epoch)
+{
 
+}
 
 
 
@@ -1047,42 +1043,16 @@ int main()
 
 
 	//network creation
-	Network tempNet = Network(1, 5, 5, 1); //************************************************add a way to choose hidden layer activation and output layer activation, cost too!!!!!!!
+	Network tempNet = Network(2, 5, 5, 1); //************************************************add a way to choose hidden layer activation and output layer activation, cost too!!!!!!!
 
 
 
 	auto& Layers = tempNet.getLayers();
-
-	cout << "*******************************WEIGHTS****************************\n";
-	//get weights
-	int i = 0, j = 0, k = 0;
-	for (auto& neurons : Layers)
-	{
-		cout << "\n******LAYER********: " << i << endl;
-		for (auto& n : neurons)
-		{
-			cout << "****NEURON****: " << j << endl;
-			auto& currentConnections = n.getweightsAndConnections();
-			for (auto& w : currentConnections)
-			{
-				cout << "**WEIGHT**: [" << i << "] [" << j << "] " << "[" << k << "] = " << w << endl;
-				k++;
-			}
-			k = 0;
-			j++;
-		}
-		j = 0;
-		i++;
-	}
-
-
 	//get training data;
 	int epoch = 50000;
 	int dataSet = 1000;
-
-
-
 	auto pairedInputAndDesire = trainingGenLogicalMathFunction(epoch);
+
 
 	cout << "\n*********TESS***********\n";
 	int ask = 0;
