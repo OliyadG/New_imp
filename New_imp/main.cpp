@@ -242,7 +242,7 @@ private:
 	vector<double> Output;
 	vector<double> desiredOutput;
 
-	double etaLearningRate = 0.2;
+	double etaLearningRate = 0.1;
 
 	double cost;
 	vector<double> deltaCosts;
@@ -315,10 +315,11 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 	outputLayerSize = numberOfOutputNuerons;
 
 	cost = 0.0;
-	etaLearningRate = 0.0;
+
 
 	//allocation-for-Gradient-and-Chain-Vectors
 	allocGradientAndChained();
+	
 
 	vector<vector<Neuron>> tempLayer(networkLayerSize);//supparated the inputlayer and the outputlayers
 
@@ -700,6 +701,7 @@ void Network::ClipedBinaryCrossEntropyLoss()
 void Network::DerivativeOfClipedBinaryCrossEntropyLoss()
 {
 	int syncIndex = 0;
+	deltaCosts.resize(Output.size());
 	for (auto& singleOutputNeurons : Output)
 	{
 		// Clipping the output to avoid log(0) or division by zero
@@ -869,7 +871,7 @@ void Network::backPropagationCalculateGradient()
 
 				calculatedGradientBias[currentLayerIndex - 1][indexOfBackNeuron] = chainedStored[currentLayerIndex][indexOfFrontNeuron];//bias gradient
 
-				tempChained += (chainedStored[currentLayerIndex][indexOfFrontNeuron] * backWieght[indexOfFrontNeuron] * derivativeOfActivationFunction(TANH, backWeightedSum));
+				tempChained += (chainedStored[currentLayerIndex][indexOfFrontNeuron] * backWieght[indexOfFrontNeuron] * derivativeOfActivationFunction(hiddenLayerActivation, backWeightedSum));
 			}
 			chainedStored[currentLayerIndex - 1][indexOfBackNeuron] = tempChained;
 		}
@@ -923,20 +925,30 @@ void Network::backPropagationPropagate()
 			//cout << "Neuron:::::::" << numberOfneuron << endl;
 			int weightsize = calculatedGradientWeight[numberofLayer][numberOfneuron].size();
 			auto& Layerweights = Layers[numberofLayer][numberOfneuron].getweightsAndConnections();
-
 			auto& bias = Layers[numberofLayer][numberOfneuron].getBais();
-			bias -= calculatedGradientBias[numberofLayer][numberOfneuron]/100;//here
+			//bias -= etaLearningRate*calculatedGradientBias[numberofLayer][numberOfneuron];//here
 
 			//iterate weights
 			//cout << "***start weight***\n";
-			for (int numberOfWeight = 0; numberOfWeight < weightsize; numberOfWeight++)
-			{
-				if (desiredOutput[0] != 11)
+			if (costFunction == BCEL || costFunction == CBCEL) {
+				for (int numberOfWeight = 0; numberOfWeight < weightsize; numberOfWeight++)
 				{
-					Layerweights[numberOfWeight] -= calculatedGradientWeight[numberofLayer][numberOfneuron][numberOfWeight] / 100;
+
+					if (desiredOutput[0] == 1)
+					{
+						Layerweights[numberOfWeight] -= etaLearningRate*calculatedGradientWeight[numberofLayer][numberOfneuron][numberOfWeight];
+					}
+					else {
+						Layerweights[numberOfWeight] += etaLearningRate*calculatedGradientWeight[numberofLayer][numberOfneuron][numberOfWeight];//change +
+					}
 				}
-				else {
-					Layerweights[numberOfWeight] += calculatedGradientWeight[numberofLayer][numberOfneuron][numberOfWeight] / 100;//change +
+			}
+			else {
+				bias -= etaLearningRate*calculatedGradientBias[numberofLayer][numberOfneuron];//here
+				for (int numberOfWeight = 0; numberOfWeight < weightsize; numberOfWeight++)
+				{
+
+					Layerweights[numberOfWeight] += etaLearningRate * calculatedGradientWeight[numberofLayer][numberOfneuron][numberOfWeight];
 				}
 			}
 			//cout << "***endl weight***\n";
@@ -944,22 +956,22 @@ void Network::backPropagationPropagate()
 	}
 }
 
-pair<vector<vector<double>>, vector<double>> trainingGenLogicalOperations(int size = 1000)
+pair<vector<vector<double>>, vector<vector<double>>> trainingGenLogicalOperations(int size = 1000)
 {
-	pair<vector<vector<double>>, vector<double>> pairedData;
+	pair<vector<vector<double>>, vector<vector<double>>> pairedData;
 	vector<vector<double>> stempDataDesire;
+	vector<vector<double>> tempDataDesire;
 	vector<vector<double>> tempDataInput;
-	vector<double> tempDataDesire;
 	for (int a = 0; a < size; ++a) {
 		
 		tempDataInput.push_back({ static_cast<double>(0), static_cast<double>(0) });
-		tempDataDesire.push_back(0);
+		tempDataDesire.push_back({ static_cast<double>(0)});
 		tempDataInput.push_back({ static_cast<double>(0), static_cast<double>(1) });
-		tempDataDesire.push_back(1);
+		tempDataDesire.push_back({ static_cast<double>(1) });
 		tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(1) });
-		tempDataDesire.push_back(0);
+		tempDataDesire.push_back({ static_cast<double>(0) });
 		tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(0) });
-		tempDataDesire.push_back(1);
+		tempDataDesire.push_back({ static_cast<double>(1) });
 	}
 	pairedData.first = tempDataInput;
 	pairedData.second = tempDataDesire;
@@ -1027,7 +1039,7 @@ void train(int epoch, int datasetSize, Network& model, vector<vector<double>>& i
 
 		while (repeat > 0)
 		{
-			while (count < datasetSize)
+			while (count < epoch)
 			{									/******START SINGLE TRAING******/
 			//separate learning
 				model.setInput(input[count]);
@@ -1078,7 +1090,6 @@ void train(int epoch, int datasetSize, Network& model, vector<vector<double>>& i
 			count = 0;
 		}
 }
-
 void checkWeightsAndBiases(vector<vector<Neuron>>& Layers)
 {
 	cout << "\nweights and biases****\n";
@@ -1104,8 +1115,6 @@ void checkWeightsAndBiases(vector<vector<Neuron>>& Layers)
 
 	
 }
-
-
 void testModel(Network& model, vector<double> inpt)
 {
 
@@ -1133,23 +1142,24 @@ int main()
 	//auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
 	//cout << "Time taken: " << duration.count() << " microseconds" << endl;
 
-
-
 	//network creation
-	auto model = Network(2, 5, 5, 1, TANH, SIGMOID, CBCEL);//init net
+	auto model = Network(2, 3, 3, 1, TANH, SIGMOID, BCEL);//init net
 	auto& Layers = model.getLayers();							//get Layers
 	
 	
 	//get training data
-	int epoch = 50000;											//number of trainigs - 1000 trained 50X
-	int dataSet = 1000;											//number of dataset - single generated data
+	int epoch = 100000;											//number of trainigs - 1000 trained 50X
+	int dataSet = 100000;											//number of dataset - single generated data
 
-	auto pairedInputAndDesire = trainingGenLogicalMathFunction(epoch); //x^2
+	
 	//test for right changes
+	//auto pairedInputAndDesire = trainingGenLogicalMathFunction(epoch); //x^2
+	auto pairedInputAndDesire = trainingGenLogicalOperations(epoch);
 	vector<vector<double>> input = pairedInputAndDesire.first;
 	vector<vector<double>> desire = pairedInputAndDesire.second;
-
+	checkWeightsAndBiases(Layers);
 	train(epoch, dataSet, model, input, desire);
+	checkWeightsAndBiases(Layers);
 }
 
 
