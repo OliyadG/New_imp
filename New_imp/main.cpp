@@ -33,6 +33,7 @@ static int inputLayersize;
 static int hiddenLayersize;
 static int outputLayerSize;
 
+void outputVerbose(vector<double>& input, vector<double> desired, vector<double>& output, double cost);
 
 
 
@@ -87,9 +88,9 @@ void Neuron::makeConnections(int numberOfNextLayerNeurons)
 	}
 
 
-	b_Bais = dist(random_engine)*0.5;
+	b_Bais = dist(random_engine)*0.1;
 
-	//b_Bais < 0 ? b_Bais = 0 : b_Bais = 1;
+	//b_Bais < 0 ? b_Bais = 0 : b_Bais = 1; // leave it be. here dont forget
 	//b_Bais = 0; //change
 }
 class Network {
@@ -125,7 +126,7 @@ public:
 	double swishActivationFunction(double x) { return x / (1 + exp(-x)); }
 	double swishActivationFunction_derivative(double x) { double exp_x = exp(-x); double denominator = (1 + exp_x) * (1 + exp_x); return (exp_x * (x + 1) - 1) / denominator; }
 
-	double softmax(double x) { double exp_x = exp(x); return exp_x / (1 + exp_x); }
+	void softmax(double maxOuput);
 	double softmax_derivative(double x) { double exp_x = exp(x);	double denominator = (1 + exp_x) * (1 + exp_x);		return exp_x / denominator; }
 
 	double softplus(double x) { return log(1 + exp(x)); }
@@ -196,6 +197,7 @@ public:
 	void setHiddenLayerActivation(int function){ hiddenLayerActivation = function;}
 	void setOutputLayerActivation(int function){ outputLayerActivation = function;}
 	void setCostFunction(int function){ costFunction = function;}
+	void setCatagoricalSoftMaxCond(bool cond) { catagorical_softmax = cond; }
 
 
 
@@ -242,7 +244,7 @@ private:
 	vector<double> Output;
 	vector<double> desiredOutput;
 
-	double etaLearningRate = 0.1;
+	double etaLearningRate = 0.3;
 
 	double cost;
 	vector<double> deltaCosts;
@@ -261,7 +263,12 @@ private:
 	double alpha = 0.5, gamma = 0.5; // adjust as needed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	//leaky
-	double alphaLeaky = 0.1;
+	double alphaLeaky = 0.01;
+
+
+	//catagorical settings
+
+	bool catagorical_softmax = false;
 
 
 };
@@ -337,8 +344,17 @@ Network::Network(int numberOfInputLayersNeuron, int numberOfHiddenLayers, int nu
 		for (int countNeurons = 0; countNeurons < numberOfHiddenNeurons; countNeurons++)
 		{
 			Neuron tempNeuron = Neuron();
-			tempNeuron.makeConnections(numberOfHiddenNeurons);
+			
+			if (countLayers != numberOfHiddenLayers) {						// the last layer before the output layer should only make as many output neurons are in the outpputlayer
+				tempNeuron.makeConnections(numberOfHiddenNeurons);
+			}
+			else {
+				tempNeuron.makeConnections(numberOfOutputNuerons);
+			}
+			
 			tempLayer[countLayers].push_back(tempNeuron);
+			
+	
 		}
 	}
 
@@ -426,10 +442,6 @@ double Network::ActivationFunctionsChoice(int Choice, double weightedSum)
 		Activated = elu(weightedSum);
 		break;
 
-	case SOFTMAX:
-		Activated = softmax(weightedSum);
-		break;
-
 	default:
 		cerr << "***Activation Function Jumped!!***\n\a";
 		break;
@@ -504,6 +516,7 @@ double Network::derivativeOfActivationFunction(int Choice, double weightedSum)
 
 	return Activated;
 }
+
 void Network::feedForwardFlexableOutputs(int functionChoice)
 {
 	/*
@@ -515,14 +528,57 @@ void Network::feedForwardFlexableOutputs(int functionChoice)
 	*/
 	double weightedSum;
 	int singleLayer = Layers.size() - 2; //-2 because its coming from hiddenl layer
+	double maxOutput;//softmax's argument
 	for (int singleNeuron = 0; singleNeuron < Layers[singleLayer + 1].size(); singleNeuron++)//for every output
 	{
+
+
+
 		weightedSum = getWeightedSum(singleLayer, singleNeuron); //sends the layer and the index number of the next nueron for the weight to be extracted for
+		//we have weightedsum = (w1x+b * w2x+b....)
 		Layers[singleLayer + 1][singleNeuron].setWeightedSum(weightedSum);
-		double Activated = ActivationFunctionsChoice(functionChoice, weightedSum);
-		Output.push_back(Activated);
+		
+		//optionally - change
+		double Activated = ActivationFunctionsChoice(functionChoice, weightedSum); //change softmax
+		
+		Layers[singleLayer + 1][singleNeuron].set_xInput(Activated);
+		//optionally
+		/*the risky implimentation
+		* i'm not going to push the value into output
+		* but i will push the weighted sum as usual
+		* 
+		* crucial thing here is am going to find the max value that is going to
+		* be passed to the softmax
+		* 
+		*/
+
+		
+		
+		//Output.push_back(Activated); 
+		if (catagorical_softmax)
+		{
+			maxOutput = max(maxOutput, weightedSum);//get maxoutput for softmax
+			Output.push_back(weightedSum); //for softmax change
+		}
+		else {
+			Output.push_back(Activated);
+		}
+		
 	}
+
+	/*
+	* if there it's catagorical then softmax is applied here
+	* check if the condition catagorical_softmax is true
+	* if then apply softmax for all outputs respectivly
+	*/
+
+	if (catagorical_softmax)
+	{
+		softmax(maxOutput);
+	}
+
 }
+
 void Network::feedForwardFlexableInputs()
 {
 	/*
@@ -714,6 +770,11 @@ void Network::DerivativeOfClipedBinaryCrossEntropyLoss()
 		syncIndex++;
 	}
 }
+
+
+
+
+
 void Network::CategoricalCrossEntropyLoss() {
 	int syncIndex = 0;
 	cost = 0;
@@ -731,10 +792,58 @@ void Network::DerivativeOfCategoricalCrossEntropyLoss() {
 	deltaCosts.clear();
 	for (auto& singleOutputNeurons : Output)
 	{
-		deltaCosts.push_back(-desiredOutput[syncIndex] / (singleOutputNeurons + 1e-10));
+		deltaCosts.push_back(singleOutputNeurons - desiredOutput[syncIndex]);	//simplified -desiredOutput[i] / softmaxedOutput[i] * softmaxedOutput[i] * (1 - softmaxedOutput[i])
+		/* just brilliant
+		https://shivammehta25.github.io/posts/deriving-categorical-cross-entropy-and-softmax/#cross-entropy-loss
+		*/
 		syncIndex++;
 	}
 }
+void Network::softmax(double maxOutput)
+{
+	/*
+	* Compute the maximum value in the output to improve numerical stability
+	* Compute the sum of exponentials of (output - maxOutput)
+	* Compute softmax values
+
+	*/
+
+
+	//stability, max val
+	//double maxOutput = *max_element(Output.begin(), Output.end()); //change
+
+
+	cout << "--------" << maxOutput << endl;
+	for (auto ss : Output)
+	{
+		cout << ss << endl;
+	}
+
+	// sum exponetial
+	double expSum = 0.0;
+	for (auto& singleOutput : Output) {
+		expSum += exp(singleOutput - maxOutput); //stability
+	}
+
+	// softmax
+	for (auto& singleOutput : Output) {
+		singleOutput = exp(singleOutput - maxOutput) / expSum;
+	}
+
+	cout << "--------" << maxOutput << endl;
+	for (auto ss : Output)
+	{
+		cout << ss << endl;
+	}
+}
+
+
+
+
+
+
+
+
 void Network::HuberLoss(double delta) {
 
 	int syncIndex = 0;
@@ -816,64 +925,44 @@ void Network::DerivativeOfDiceLoss() {
 		deltaCosts.push_back((2 * desiredOutput[syncIndex] * (sum - 2 * intersection)) / (sum * sum + 1e-10));
 	}
 }
-void Network::backPropagationCalculateGradient()
-{
-	/*
-	* calculates the chain of last layer which is cost/output same as (delta) * output/derivativeOfActivationFunction(weightedsum from backLayer).
-	* there is no gradient for the last
-	* the chain is calculated inside the first for
-	*
-	* goes to the second large loop and for every front neuron,(assuning the derivativeActivation(weightedsum) is chained already
-	* it calculates the chained*weightedsum of back Neuron; iterates throught the front neurons, while storing the chain in tempchain, the gradient is stored.
-	* at the end it stores the chained for that back neuron index
-	*/
-
-	int indexOfLayer = Layers.size() - 1;
-	int indexOfFrontNeuron;
-	int indexOfBackNeuron;
 
 
-	// gradient for last layer;
-	int indexOfLastNeuron = 0;
-	for (auto deltacost : deltaCosts)
-	{
-		double x = Layers[indexOfLayer][indexOfLastNeuron].getWeightedSum();
-		chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivativeOfActivationFunction(outputLayerActivation, x));//output activation sigmoid
-		indexOfLastNeuron++;
-		//double w = Layers[indexOfLayer][indexOfLastNeuron].getweightsAndConnections()[0];
-		//double b = Layers[indexOfLayer][indexOfLastNeuron].getBais();
-		//double weightedSumOfTheOutput = w * x + b;
-		//chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivativeOfSigmoidFucntion(w * x + b));     //temporary chain
-		//these 3 were for the last incorrect layer changed.
-		//calculatedGradientWeight[indexOfLayer][indexOfLastNeuron][0] = chainedStored[indexOfLayer][indexOfLastNeuron] * x;
-		//chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivativeOfSigmoidFucntion(w * x + b) * w * derivateOfTanhActivationFunction(x)); // chained stored
-		//chainedStored[indexOfLayer][indexOfLastNeuron] = (deltacost * derivateOfTanhActivationFunction(w * x + b) * w * derivateOfTanhActivationFunction(x)); // remove
+void Network::backPropagationCalculateGradient() {
+	int numLayers = Layers.size();
+
+	for (int neuronIndex = 0; neuronIndex < deltaCosts.size(); ++neuronIndex) {
+		double weightedSum = Layers[numLayers - 1][neuronIndex].getWeightedSum();
+		if (catagorical_softmax) {
+			chainedStored[numLayers - 1][neuronIndex] = deltaCosts[neuronIndex]; //change dont forget
+		}
+		else {
+			chainedStored[numLayers - 1][neuronIndex] = deltaCosts[neuronIndex] *
+				derivativeOfActivationFunction(outputLayerActivation, weightedSum);
+		}
 	}
+	for (int layerIndex = numLayers - 2; layerIndex >= 0; --layerIndex) {
+		for (int backNeuronIndex = 0; backNeuronIndex < Layers[layerIndex].size(); ++backNeuronIndex) {
+			Neuron& backNeuron = Layers[layerIndex][backNeuronIndex];
+			double backActivation = backNeuron.getInput();
+			double backWeightedSum = backNeuron.getWeightedSum();
+			double chainSum = 0.0;
 
-	for (int currentLayerIndex = indexOfLayer; currentLayerIndex > 0; currentLayerIndex--)
-	{
-		indexOfBackNeuron = 0;//leave me alone
-		//back neuron
-		for (int backSize = Layers[currentLayerIndex - 1].size(); indexOfBackNeuron < backSize; indexOfBackNeuron++)
-		{
-			indexOfFrontNeuron = 0;//leave me alone
+			for (int frontNeuronIndex = 0; frontNeuronIndex < Layers[layerIndex + 1].size(); ++frontNeuronIndex) {
+				Neuron& frontNeuron = Layers[layerIndex + 1][frontNeuronIndex];
+				double weight = backNeuron.getweightsAndConnections()[frontNeuronIndex];
+				double frontChain = chainedStored[layerIndex + 1][frontNeuronIndex];//leave me alone
 
-			Neuron& backLayerNeuron = Layers[currentLayerIndex - 1][indexOfBackNeuron];
-			vector<double>& backWieght = backLayerNeuron.getweightsAndConnections(); //w
-			double backWeightedSum = backLayerNeuron.getWeightedSum(); //x
+				// Gradient with respect to weights
+				calculatedGradientWeight[layerIndex][backNeuronIndex][frontNeuronIndex] =
+					frontChain * backActivation;
 
-			double tempChained = 0.0;
-			//front nueron
-			for (int frontSize = Layers[currentLayerIndex].size(); indexOfFrontNeuron < frontSize; indexOfFrontNeuron++)
-			{
-				Neuron& FrontLayerNeuron = Layers[currentLayerIndex][indexOfFrontNeuron];
-				calculatedGradientWeight[currentLayerIndex - 1][indexOfBackNeuron][indexOfFrontNeuron] = chainedStored[currentLayerIndex][indexOfFrontNeuron]/*derivative of thanh(x)*/ * backWeightedSum/* x of current*/; //optimize backweight is there
-
-				calculatedGradientBias[currentLayerIndex - 1][indexOfBackNeuron] = chainedStored[currentLayerIndex][indexOfFrontNeuron];//bias gradient
-
-				tempChained += (chainedStored[currentLayerIndex][indexOfFrontNeuron] * backWieght[indexOfFrontNeuron] * derivativeOfActivationFunction(hiddenLayerActivation, backWeightedSum));
+				// Accumulate chained gradient for the back neuron
+				chainSum += frontChain * weight;
 			}
-			chainedStored[currentLayerIndex - 1][indexOfBackNeuron] = tempChained;
+
+			// Store chained gradient for the back neuron
+			chainedStored[layerIndex][backNeuronIndex] = chainSum *
+				derivativeOfActivationFunction(hiddenLayerActivation, backWeightedSum);
 		}
 	}
 }
@@ -907,54 +996,28 @@ void Network::backPropagationCalculateGradient()
 
 
 
+void Network::backPropagationPropagate() {
+	int numLayers = calculatedGradientWeight.size();
 
-void Network::backPropagationPropagate()
-{
-	/*
-	* the gradient is subtracted from the old weight
-	*/
-	int netsize = calculatedGradientWeight.size();
-	//iterate layers
-	for (int numberofLayer = 0; numberofLayer < netsize; numberofLayer++)
-	{
-		//cout << "Layer::::::" << numberofLayer << endl;
-		int neuroSize = calculatedGradientWeight[numberofLayer].size();
-		//iterate neurons
-		for (int numberOfneuron = 0; numberOfneuron < neuroSize; numberOfneuron++)
-		{
-			//cout << "Neuron:::::::" << numberOfneuron << endl;
-			int weightsize = calculatedGradientWeight[numberofLayer][numberOfneuron].size();
-			auto& Layerweights = Layers[numberofLayer][numberOfneuron].getweightsAndConnections();
-			auto& bias = Layers[numberofLayer][numberOfneuron].getBais();
-			//bias -= etaLearningRate*calculatedGradientBias[numberofLayer][numberOfneuron];//here
+	for (int layerIndex = 0; layerIndex < numLayers; layerIndex++) {
+		int numNeurons = calculatedGradientWeight[layerIndex].size();
 
-			//iterate weights
-			//cout << "***start weight***\n";
-			if (costFunction == BCEL || costFunction == CBCEL) {
-				for (int numberOfWeight = 0; numberOfWeight < weightsize; numberOfWeight++)
-				{
+		for (int neuronIndex = 0; neuronIndex < numNeurons; neuronIndex++) {
+			auto& weights = Layers[layerIndex][neuronIndex].getweightsAndConnections();
+			auto& bias = Layers[layerIndex][neuronIndex].getBais();
 
-					if (desiredOutput[0] == 1)
-					{
-						Layerweights[numberOfWeight] -= etaLearningRate*calculatedGradientWeight[numberofLayer][numberOfneuron][numberOfWeight];
-					}
-					else {
-						Layerweights[numberOfWeight] += etaLearningRate*calculatedGradientWeight[numberofLayer][numberOfneuron][numberOfWeight];//change +
-					}
-				}
+			// Update bias
+			bias -= etaLearningRate * calculatedGradientBias[layerIndex][neuronIndex];
+
+			int numWeights = weights.size();
+			for (int weightIndex = 0; weightIndex < numWeights; weightIndex++) {
+				// Update weights
+				weights[weightIndex] -= etaLearningRate * calculatedGradientWeight[layerIndex][neuronIndex][weightIndex];
 			}
-			else {
-				bias -= etaLearningRate*calculatedGradientBias[numberofLayer][numberOfneuron];//here
-				for (int numberOfWeight = 0; numberOfWeight < weightsize; numberOfWeight++)
-				{
-
-					Layerweights[numberOfWeight] += etaLearningRate * calculatedGradientWeight[numberofLayer][numberOfneuron][numberOfWeight];
-				}
-			}
-			//cout << "***endl weight***\n";
 		}
 	}
 }
+
 
 pair<vector<vector<double>>, vector<vector<double>>> trainingGenLogicalOperations(int size = 1000)
 {
@@ -965,13 +1028,20 @@ pair<vector<vector<double>>, vector<vector<double>>> trainingGenLogicalOperation
 	for (int a = 0; a < size; ++a) {
 		
 		tempDataInput.push_back({ static_cast<double>(0), static_cast<double>(0) });
-		tempDataDesire.push_back({ static_cast<double>(0)});
+		//tempDataDesire.push_back({ static_cast<double>(0)});
+		tempDataDesire.push_back({ static_cast<double>(0), static_cast<double>(1) });
+
 		tempDataInput.push_back({ static_cast<double>(0), static_cast<double>(1) });
-		tempDataDesire.push_back({ static_cast<double>(1) });
+		//tempDataDesire.push_back({ static_cast<double>(1) });
+		tempDataDesire.push_back({ static_cast<double>(1), static_cast<double>(0) });
+
 		tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(1) });
-		tempDataDesire.push_back({ static_cast<double>(0) });
+		//tempDataDesire.push_back({ static_cast<double>(0) });
+		tempDataDesire.push_back({ static_cast<double>(0), static_cast<double>(1) });
+
 		tempDataInput.push_back({ static_cast<double>(1), static_cast<double>(0) });
-		tempDataDesire.push_back({ static_cast<double>(1) });
+		//tempDataDesire.push_back({ static_cast<double>(1) });
+		tempDataDesire.push_back({ static_cast<double>(1), static_cast<double>(0) });
 	}
 	pairedData.first = tempDataInput;
 	pairedData.second = tempDataDesire;
@@ -1029,6 +1099,36 @@ pair<vector<vector<double>>, vector<vector<double>>> trainingGenLogicalMathFunct
 * why can't it go up more than 1?
 
 */
+
+
+
+void checkWeightsAndBiases(vector<vector<Neuron>>& Layers)
+{
+	cout << "\nweights and biases****\n";
+
+	int sizeLayer = Layers.size();
+	for (int numberOfLayer = 0; numberOfLayer < sizeLayer; numberOfLayer++)
+	{
+		cout << "layer**: " << numberOfLayer << endl;
+		int sizeNeuron = Layers[numberOfLayer].size();
+		for (int numberOfNeuron = 0; numberOfNeuron < sizeNeuron; numberOfNeuron++)
+		{
+			auto& bias = Layers[numberOfLayer][numberOfNeuron].getBais();
+			auto& weights = Layers[numberOfLayer][numberOfNeuron].getweightsAndConnections();
+			int sizeWeight = weights.size();
+			cout << "weights**" << endl;
+			for (int numberOfweight = 0; numberOfweight < sizeWeight; numberOfweight++)
+			{
+				//prints all weight
+				cout << "L[" << numberOfLayer << "]" << "N[" << numberOfNeuron << "]" << " W = " << weights[numberOfweight] << endl;
+			}
+			cout << "\n+ bias**\n" << "L[" << numberOfLayer << "]" << "N[" << numberOfNeuron << "]" << " B= " << bias<<endl;
+		}
+	}
+
+
+}
+
 void train(int epoch, int datasetSize, Network& model, vector<vector<double>>& input, vector<vector<double>>& desire)
 {
 		vector<double>& output = model.getOutput();
@@ -1039,9 +1139,14 @@ void train(int epoch, int datasetSize, Network& model, vector<vector<double>>& i
 
 		while (repeat > 0)
 		{
+			checkWeightsAndBiases(model.getLayers());//check weights
 			while (count < epoch)
 			{									/******START SINGLE TRAING******/
 			//separate learning
+			
+				
+				
+			    
 				model.setInput(input[count]);
 				model.setDesiredOutput(desire[count]);
 				//step #2 feedforward.
@@ -1057,21 +1162,27 @@ void train(int epoch, int datasetSize, Network& model, vector<vector<double>>& i
 				/******END SINGLE TRAING******/
 
 //output input
-				for (auto& inp : input[count])
-				{
-					cout << "input [" << syncIndex << "]: " << inp;
-					cout << endl;
-					syncIndex++;
-				}
-				//output desired and actual
-				for (auto& dsi : desire[count])
-				{
-					cout << "desired [" << syncIndexOutput << "]: " << dsi << " ||| output [" << syncIndexOutput << "]: " << output[syncIndexOutput];
-					cout << endl;
-					syncIndexOutput++;
-				}
-				//cost
-				cout << "***** COST ****: " << model.getCost() << endl;
+
+				
+
+				outputVerbose(input[count], desire[count], output, model.getCost());
+
+
+				//for (auto& inp : input[count])
+				//{
+				//	cout << "input [" << syncIndex << "]: " << inp;
+				//	cout << endl;
+				//	syncIndex++;
+				//}
+				////output desired and actual
+				//for (auto& dsi : desire[count])
+				//{
+				//	cout << "desired [" << syncIndexOutput << "]: " << dsi << " ||| output [" << syncIndexOutput << "]: " << output[syncIndexOutput];
+				//	cout << endl;
+				//	syncIndexOutput++;
+				//}
+				////cost
+				//cout << "***** COST ****: " << model.getCost() << endl;
 
 
 				model.resetOutput();
@@ -1088,33 +1199,10 @@ void train(int epoch, int datasetSize, Network& model, vector<vector<double>>& i
 			}
 			repeat--;
 			count = 0;
+			checkWeightsAndBiases(model.getLayers());//check weights
 		}
 }
-void checkWeightsAndBiases(vector<vector<Neuron>>& Layers)
-{
-	cout << "\nweights and biases****\n";
 
-	int sizeLayer = Layers.size();
-	for (int numberOfLayer = 0; numberOfLayer < sizeLayer; numberOfLayer++)
-	{
-		cout << "layer: " << numberOfLayer<<endl;
-		int sizeNeuron = Layers[numberOfLayer].size();
-		for (int numberOfNeuron = 0; numberOfNeuron < sizeNeuron; numberOfNeuron++)
-		{
-			auto& bias = Layers[numberOfLayer][numberOfNeuron].getBais();
-			auto& weights = Layers[numberOfLayer][numberOfNeuron].getweightsAndConnections();
-			int sizeWeight = weights.size();
-			for (int numberOfweight = 0; numberOfweight < sizeWeight; numberOfweight++)
-			{
-				//prints all weight
-				cout << "[" << numberOfLayer << "]" << "[" << numberOfNeuron << "]" << " = " << weights[numberOfweight]<<endl;
-			}	
-			cout << "+ bias**\n"<<"[" << numberOfLayer << "]" << "[" << numberOfNeuron << "]" <<" = "<< bias;
-		}
-	}
-
-	
-}
 void testModel(Network& model, vector<double> inpt)
 {
 
@@ -1131,6 +1219,35 @@ void testModel(Network& model, vector<double> inpt)
 		model.resetInput();
 }
 
+void outputVerbose(vector<double>& input, vector<double> desired, vector<double>& output, double cost)
+{
+
+	//show input
+	cout << "\n*****input: \n";
+	for (auto& in : input)
+	{
+		cout << "<<---- "<<in << endl;
+	}
+	//show output
+	cout << "*****output: \n";
+	for (auto& out : output)
+	{
+		cout <<"---->> " << out << endl;
+	}
+	//show output
+	cout << "*****desired: \n";
+	for (auto& des : desired)
+	{
+		cout << "===== " << des<< endl;
+	}
+	//show cost
+	cout << "\n*******************cost : " << cost<<endl;
+
+	
+
+
+}
+
 
 
 
@@ -1143,12 +1260,13 @@ int main()
 	//cout << "Time taken: " << duration.count() << " microseconds" << endl;
 
 	//network creation
-	auto model = Network(2, 3, 3, 1, TANH, SIGMOID, BCEL);//init net
+	auto model = Network(2, 1, 4, 2, RELU, RELU, CCE);//init net
+	model.setCatagoricalSoftMaxCond(true);//catagorical!
 	auto& Layers = model.getLayers();							//get Layers
 	
 	
 	//get training data
-	int epoch = 100000;											//number of trainigs - 1000 trained 50X
+	int epoch = 100000;												//number of trainigs - 1000 trained 50X
 	int dataSet = 100000;											//number of dataset - single generated data
 
 	
@@ -1157,9 +1275,36 @@ int main()
 	auto pairedInputAndDesire = trainingGenLogicalOperations(epoch);
 	vector<vector<double>> input = pairedInputAndDesire.first;
 	vector<vector<double>> desire = pairedInputAndDesire.second;
-	checkWeightsAndBiases(Layers);
+	//checkWeightsAndBiases(Layers);
 	train(epoch, dataSet, model, input, desire);
-	checkWeightsAndBiases(Layers);
+	//checkWeightsAndBiases(Layers);
+
+	testModel(model, vector<double>{0, 0});
+	testModel(model, vector<double>{1, 1});
+	testModel(model, vector<double>{1, 0});
+	testModel(model, vector<double>{0, 1});
+
+
 }
 
 
+/*
+* i have made changes to the catagorical cross entropy cost
+* it now can very correctly handle classification.
+* the only change made is the derivative of the cost
+* anther thing is the softmax, the last layer where the output is filled.
+* if the catagorical_softmax is set true
+* then it applies the softmax
+* then the other thing that bothered me was integrating the softmax derivative inside the cost derivative. 
+* since it can be simplified and i would't have to modify the backpropgradient calculator
+* 
+* 
+* 
+* now what i need is to change:
+* 1.create a supparate outputVerbose function make it flexable that i wouldn't have to change it when the network architecture changes
+* 2.create a dataset maker or image to vector in this case.
+* 3.test the network with a single set of picutre like the number 3
+* 
+
+
+*/
